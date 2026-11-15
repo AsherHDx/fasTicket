@@ -146,9 +146,21 @@ export default function App() {
       orden: 0,
     };
 
-    const ok = await agregarTicket(nuevoTicket);
-    if (!ok) {
+    const resultado = await agregarTicket(nuevoTicket);
+
+    if (!resultado) {
+      // Ticket duplicado no atendido (error ya establecido en el hook)
+      if (error) {
+        setNotificacion({ tipo: 'error', mensaje: error });
+        setTimeout(() => setNotificacion(null), 3000);
+      }
       return;
+    }
+
+    // Si el ticket ya existía y estaba atendido, se reactivó (resultado.atendido === true indica que era atendido antes de reactivar)
+    if (resultado.atendido === true) {
+      setNotificacion({ tipo: 'exito', mensaje: 'Ticket reactivado: ya no está marcado como atendido' });
+      setTimeout(() => setNotificacion(null), 3000);
     }
 
     setTextoLineas('');

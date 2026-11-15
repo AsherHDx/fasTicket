@@ -85,7 +85,9 @@ export function useTickets() {
    * Agrupa tickets por sección aplicando filtro de búsqueda.
    */
   const obtenerTicketsPorSeccion = useCallback((seccionId) => {
-    let filtrados = tickets.filter((t) => t.seccionId === seccionId);
+    let filtrados = tickets.filter(
+      (t) => t.seccionId === seccionId && t.atendido !== true
+    );
 
     if (busqueda.trim() !== '') {
       const termino = busqueda.trim().toLowerCase();
@@ -107,6 +109,34 @@ export function useTickets() {
     async (datosTicket) => {
       // Asegurar que el seccionId sea válido
       const seccionIdValida = obtenerSeccionValida(datosTicket.seccionId);
+
+      // Verificar si el ticket ya existe por ID
+      const ticketExistente = tickets.find((t) => t.id === datosTicket.id);
+
+      if (ticketExistente) {
+        // Si el ticket ya existe y está atendido, reactivarlo (cambiar a false)
+        if (ticketExistente.atendido === true) {
+          const actualizados = tickets.map((t) =>
+            t.id === datosTicket.id
+              ? {
+                  ...t,
+                  atendido: false,
+                  fechaActualizacion: new Date().toISOString(),
+                }
+              : t
+          );
+          setTickets(actualizados);
+          setError(null);
+          await persistir(actualizados);
+          return ticketExistente;
+        } else {
+          // El ticket ya existe y no está atendido, mostrar error de duplicado
+          setError(
+            `Este ticket ya existe (ID: ${datosTicket.id}). No se pueden crear tickets duplicados.`
+          );
+          return null;
+        }
+      }
 
       const nuevo = crearTicket({
         ...datosTicket,
