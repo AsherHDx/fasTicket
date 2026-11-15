@@ -886,3 +886,62 @@ body {
 .ticket-fechas-compartido:not(:hover) .fecha-compartido-detalle {
   display: none;
 }
+
+/* ===== Modal de mensajes ===== */
+.mensajes-lista {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 16px;
+  border: 1px solid var(--borde);
+  border-radius: 6px;
+  padding: 12px;
+  background-color: var(--fondo);
+}
+
+.mensaje-item {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.mensaje-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.mensaje-texto {
+  color: var(--texto);
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.mensaje-vacio {
+  color: var(--texto-secundario);
+  font-style: italic;
+  text-align: center;
+  padding: 20px;
+}
+
+.mensaje-formulario {
+  border-top: 1px solid var(--borde);
+  padding-top: 16px;
+}
+
+.textarea-comentario {
+  width: 100%;
+  padding: 10px;
+  background-color: var(--fondo);
+  border: 1px solid var(--borde);
+  border-radius: 6px;
+  color: var(--texto);
+  font-size: 14px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.textarea-comentario:focus {
+  outline: none;
+  border-color: var(--verde);
+}

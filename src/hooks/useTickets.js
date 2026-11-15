@@ -309,6 +309,29 @@ export function useTickets() {
   }, [tickets, persistir]);
 
   /**
+   * Agrega un comentario a un ticket.
+   */
+  const agregarComentario = useCallback(async (id, comentario) => {
+    const ticket = tickets.find((t) => t.id === id);
+    if (!ticket) return false;
+
+    const nuevosComentarios = [...ticket.comentarios, comentario];
+
+    const actualizados = tickets.map((t) =>
+      t.id === id
+        ? {
+            ...t,
+            comentarios: nuevosComentarios,
+            fechaActualizacion: new Date().toISOString(),
+          }
+        : t
+    );
+    setTickets(actualizados);
+    setError(null);
+    return await persistir(actualizados);
+  }, [tickets, persistir]);
+
+  /**
    * Mueve un ticket a otra sección y/o reordena.
    */
   const moverTicket = useCallback(async (id, nuevaSeccionId, nuevoOrden) => {
@@ -352,6 +375,7 @@ export function useTickets() {
     agregarCompartido,
     cambiarPrioridad,
     editarDescripcion,
+    agregarComentario,
     moverTicket,
     reordenarSecciones,
   };

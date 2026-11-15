@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { Plus, Clipboard } from 'lucide-react';
 import { useTickets } from '../hooks/useTickets.js';
+import { formatearFechaLegible } from '../utils/fechas.js';
 import Buscador from './Buscador.jsx';
 import Seccion from './Seccion.jsx';
 
@@ -29,10 +30,16 @@ export default function App() {
     agregarCompartido,
     cambiarPrioridad,
     editarDescripcion,
+    agregarComentario,
   } = useTickets();
 
   const [modalAbierto, setModalAbierto] = useState(false);
   const [notificacion, setNotificacion] = useState(null);
+
+  // Modal de mensajes (comentarios)
+  const [modalMensajesAbierto, setModalMensajesAbierto] = useState(false);
+  const [ticketMensajesAbierto, setTicketMensajesAbierto] = useState(null);
+  const [nuevoComentario, setNuevoComentario] = useState('');
 
   // Qué secciones están expandidas (todas por defecto)
   const [seccionesExpandidas, setSeccionesExpandidas] = useState(
@@ -100,10 +107,14 @@ export default function App() {
       case 'atencion':
         await toggleAtencion(id);
         break;
-      case 'mensajes':
-        setNotificacion({ tipo: 'info', mensaje: 'Función de mensajes próximamente' });
-        setTimeout(() => setNotificacion(null), 2000);
+      case 'mensajes': {
+        const t = tickets.find((x) => x.id === id);
+        if (t) {
+          setTicketMensajesAbierto(t);
+          setModalMensajesAbierto(true);
+        }
         break;
+      }
       default:
         break;
     }
@@ -167,6 +178,29 @@ export default function App() {
     setFormSeccionId(secciones.length > 0 ? secciones[0].id : '');
     setFormTipo(TIPOS_TICKET[0]);
     setModalAbierto(false);
+  };
+
+  // Guardar nuevo comentario en un ticket
+  const manejarGuardarComentario = async (e) => {
+    e.preventDefault();
+    if (!nuevoComentario.trim()) return;
+    if (!ticketMensajesAbierto) return;
+
+    const fechaActual = new Date().toISOString();
+    const fechaFormateada = formatearFechaLegible(fechaActual);
+    const comentarioConFecha = `${nuevoComentario.trim()} - ${fechaFormateada}`;
+
+    const ok = await agregarComentario(ticketMensajesAbierto.id, comentarioConFecha);
+    if (ok) {
+      // Actualizar inmediatamente en el modal para mostrar sin cerrar y volver a abrir
+      setTicketMensajesAbierto(prev => ({
+        ...prev,
+        comentarios: [...(prev.comentarios || []), comentarioConFecha]
+      }));
+      setNuevoComentario('');
+      setNotificacion({ tipo: 'exito', mensaje: 'Comentario agregado' });
+      setTimeout(() => setNotificacion(null), 2000);
+    }
   };
 
   // Seleccionar qué sección mostrar (radiobutton: solo una a la vez)
@@ -326,6 +360,46 @@ export default function App() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de mensajes (comentarios) */}
+      {modalMensajesAbierto && ticketMensajesAbierto && (
+        <div className="modal-overlay" onClick={() => setModalMensajesAbierto(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div style={{ marginBottom: 16 }}>
+              <h3>Mensajes - Ticket #{ticketMensajesAbierto.id}</h3>
+            </div>
+
+            <div className="mensajes-lista">
+              {(ticketMensajesAbierto.comentarios || []).map((comentario, index) => (
+                <div key={index} className="mensaje-item">
+                  <div className="mensaje-texto">{comentario}</div>
+                </div>
+              ))}
+              {ticketMensajesAbierto.comentarios && ticketMensajesAbierto.comentarios.length === 0 && (
+                <div className="mensaje-vacio">No hay comentarios aún.</div>
+              )}
+            </div>
+
+            <div className="mensaje-formulario">
+              <form onSubmit={manejarGuardarComentario}>
+                <textarea
+                  className="textarea-comentario"
+                  value={nuevoComentario}
+                  onChange={(e) => setNuevoComentario(e.target.value)}
+                  placeholder="Escribe un nuevo comentario..."
+                  rows="3"
+                  required
+                />
+                <div className="form-botones">
+                  <button type="submit" className="btn-guardar-verde">
+                    Agregar comentario
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
