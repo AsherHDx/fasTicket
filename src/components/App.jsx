@@ -3,8 +3,8 @@
  * Vista principal: tema oscuro, buscador, botón agregar ticket, checkboxes de visibilidad,
  * secciones desplegables y tarjetas de tickets.
  */
-import { useState, useEffect } from 'react';
-import { Plus, Clipboard, AlertCircle } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, Clipboard } from 'lucide-react';
 import { useTickets } from '../hooks/useTickets.js';
 import Buscador from './Buscador.jsx';
 import Seccion from './Seccion.jsx';
@@ -54,10 +54,6 @@ export default function App() {
     seccionId: '',
     compartir: false,
   });
-
-  useEffect(() => {
-    inicializarArchivo();
-  }, [inicializarArchivo]);
 
   // Copiar al portapapeles
   const copiarPortapapeles = async (texto) => {
@@ -155,24 +151,6 @@ export default function App() {
     });
   };
 
-  if (!archivoListo && !error) {
-    return (
-      <div className="app-loading">
-        <div className="loader">Cargando archivo de tickets...</div>
-      </div>
-    );
-  }
-
-  if (error && !archivoListo) {
-    return (
-      <div className="app-error">
-        <AlertCircle size={24} />
-        <p>Error: {error}</p>
-        <button onClick={inicializarArchivo}>Reintentar</button>
-      </div>
-    );
-  }
-
   return (
     <div className="app-container">
       {/* Notificación */}
@@ -186,11 +164,12 @@ export default function App() {
       <header className="app-header">
         <div className="header-izquierda">
           <button
-            className="btn-agregar-verde"
-            onClick={() => setModalAbierto(true)}
+            className="btn-seleccionar-archivo"
+            onClick={inicializarArchivo}
+            title="Seleccionar archivo de tickets (.txt)"
           >
-            <Plus size={18} />
-            Agregar ticket
+            <Clipboard size={18} />
+            Seleccionar archivo
           </button>
         </div>
         <div className="header-centro">
@@ -198,9 +177,25 @@ export default function App() {
             valor={busqueda}
             onCambio={setBusqueda}
             onLimpiar={() => setBusqueda('')}
+            disabled={!archivoListo}
           />
         </div>
-        <div className="header-derecha"></div>
+        <div className="header-derecha">
+          {!archivoListo && (
+            <span className="estado-archivo" style={{ color: '#ef4444' }}>
+              ⚠️ Sin archivo cargado
+            </span>
+          )}
+          <button
+            className={`btn-agregar-verde ${!archivoListo ? 'disabled' : ''}`}
+            onClick={() => setModalAbierto(true)}
+            disabled={!archivoListo}
+            style={{ marginLeft: 'auto' }}
+          >
+            <Plus size={18} />
+            Agregar ticket
+          </button>
+        </div>
       </header>
 
       {/* Checkboxes de visibilidad de secciones (múltiples a la vez) */}

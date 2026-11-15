@@ -3,7 +3,7 @@
  */
 import { Search, X } from 'lucide-react';
 
-export default function Buscador({ valor, onCambio, onLimpiar }) {
+export default function Buscador({ valor, onCambio, onLimpiar, disabled }) {
   return (
     <div className="buscador-container">
       <div className="buscador-wrapper">
@@ -14,6 +14,7 @@ export default function Buscador({ valor, onCambio, onLimpiar }) {
           placeholder="Buscar ticket por título o ID..."
           value={valor}
           onChange={(e) => onCambio(e.target.value)}
+          disabled={disabled}
         />
         {valor.trim() !== '' && (
           <button
