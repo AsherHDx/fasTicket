@@ -26,7 +26,7 @@ export default function App() {
     cerrarTicket,
     toggleAtendido,
     toggleAtencion,
-    toggleCompartido,
+    agregarCompartido,
     cambiarPrioridad,
     editarDescripcion,
   } = useTickets();
@@ -81,13 +81,15 @@ export default function App() {
       case 'copiar-datos': {
         const t = tickets.find((x) => x.id === id);
         if (t) {
-          const datos = `ID: ${t.id}\nTítulo: ${t.titulo}\nURL: ${t.url || ''}`;
+          const datos = `${t.url || ''}\n${t.titulo}\n${t.id}`;
           await copiarPortapapeles(datos);
         }
         break;
       }
       case 'compartido':
-        await toggleCompartido(id);
+        await agregarCompartido(id);
+        setNotificacion({ tipo: 'exito', mensaje: 'Fecha añadida a las fechas del ticket' });
+        setTimeout(() => setNotificacion(null), 2000);
         break;
       case 'atendido':
         await toggleAtendido(id);

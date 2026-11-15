@@ -112,9 +112,19 @@ export default function TicketCard({ ticket, onAccion, onEditarDescripcion, onCa
         {/* Fila 2 */}
         <div className="accion-fila">
           <button
-            className={`icon-btn btn-compartido ${esCompartido ? 'activo' : ''}`}
-            title={esCompartido ? 'Desmarcar compartido' : 'Marcar como compartido'}
+            className="icon-btn btn-compartido"
+            title="Marcar como compartido"
             onClick={() => manejarAccion('compartido')}
+            style={{ transform: 'scale(1)' }}
+            onMouseDown={(e) => {
+              e.currentTarget.style.transform = 'scale(0.9)';
+            }}
+            onMouseUp={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
           >
             <Share2 size={16} />
           </button>

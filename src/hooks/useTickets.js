@@ -226,19 +226,18 @@ export function useTickets() {
   }, [tickets, persistir]);
 
   /**
-   * Cambia el estado de "compartido" de un ticket y agrega fecha.
+   * Marca un ticket como compartido agregando la fecha y hora actual a su lista de fechas.
+   * No es toggle: cada vez que se presiona se agrega una nueva fecha.
    */
-  const toggleCompartido = useCallback(async (id) => {
+  const agregarCompartido = useCallback(async (id) => {
     const ticket = tickets.find((t) => t.id === id);
     if (!ticket) return false;
 
     const fechaActual = new Date().toISOString();
-    const fechas = ticket.compartido
-      ? ticket.fechas.filter((f) => f !== fechaActual)
-      : [...ticket.fechas, fechaActual];
+    const fechas = [...ticket.fechas, fechaActual];
 
     const actualizados = tickets.map((t) =>
-      t.id === id ? { ...t, compartir: !ticket.compartido, fechas } : t
+      t.id === id ? { ...t, compartir: true, fechas } : t
     );
     setTickets(actualizados);
     setError(null);
@@ -320,7 +319,7 @@ export function useTickets() {
     cerrarTicket,
     toggleAtendido,
     toggleAtencion,
-    toggleCompartido,
+    agregarCompartido,
     cambiarPrioridad,
     editarDescripcion,
     moverTicket,
