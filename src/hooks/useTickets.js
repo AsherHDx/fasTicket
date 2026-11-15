@@ -292,6 +292,77 @@ export function useTickets() {
   );
 
   /**
+   * Crea un ticket y lo cierra inmediatamente (lo mueve al archivo de cerrados).
+   * Operación atómica: no hay problema de estado desactualizado.
+   */
+  const crearYCerrarTicket = useCallback(
+    async (datosTicket) => {
+      // Verificar que el seccionId sea válido
+      const seccionIdValida = obtenerSeccionValida(datosTicket.seccionId);
+
+      // Verificar que no exista ya un ticket con este ID (ni atendido ni no atendido)
+      const ticketExistente = tickets.find((t) => t.id === datosTicket.id);
+
+      if (ticketExistente) {
+        // Si ya existe y está atendido, reactivarlo y luego cerrarlo
+        if (ticketExistente.atendido === true) {
+          const actualizados = tickets.map((t) =>
+            t.id === datosTicket.id
+              ? { ...t, atendido: false, fechaActualizacion: new Date().toISOString() }
+              : t
+          );
+          setTickets(actualizados);
+
+          // Ahora cerrarlo
+          return await cerrarTicket(datosTicket.id);
+        } else {
+          // Ya existe y no está atendido -> duplicado
+          setError(
+            `Este ticket ya existe (ID: ${datosTicket.id}). No se pueden crear tickets duplicados.`
+          );
+          return false;
+        }
+      }
+
+      // Crear el nuevo ticket
+      const nuevo = crearTicket({
+        ...datosTicket,
+        seccionId: seccionIdValida,
+      });
+
+      const validacion = validarTicketCompleto(nuevo, tickets);
+      if (!validacion.valido) {
+        setError(validacion.errores.join(', '));
+        return false;
+      }
+
+      // Si no hay archivo de cerrados seleccionado, no se puede cerrar
+      if (!obtenerHandleCerrados()) {
+        setError('Primero selecciona o crea un archivo de tickets cerrados.');
+        return false;
+      }
+
+      try {
+        // Agregar al archivo de cerrados (con resumen automático)
+        await agregarTicketCerrado(obtenerHandleCerrados(), {
+          url: nuevo.url,
+          titulo: nuevo.titulo,
+          id: nuevo.id,
+          tipo: nuevo.tipo || 'Sin tipo',
+        });
+
+        // El ticket nunca se agregó a tickets activos, solo se fue directamente a cerrados
+        setError(null);
+        return true;
+      } catch (err) {
+        setError(err.message);
+        return false;
+      }
+    },
+    [tickets, persistir, obtenerHandleCerrados, agregarTicketCerrado, obtenerSeccionValida]
+  );
+
+  /**
    * Cambia el estado de "atendido" de un ticket.
    */
   const toggleAtendido = useCallback(async (id) => {
@@ -441,5 +512,6 @@ export function useTickets() {
     agregarComentario,
     moverTicket,
     reordenarSecciones,
+    crearYCerrarTicket,
   };
 }

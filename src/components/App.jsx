@@ -34,6 +34,7 @@ export default function App() {
     abrirArchivoCerrados,
     crearNuevoArchivoCerrados,
     archivoCerradosListo,
+    crearYCerrarTicket,
   } = useTickets();
 
   const [modalAbierto, setModalAbierto] = useState(false);
@@ -175,7 +176,66 @@ export default function App() {
     if (resultado.atendido === true) {
       setNotificacion({ tipo: 'exito', mensaje: 'Ticket reactivado: ya no está marcado como atendido' });
       setTimeout(() => setNotificacion(null), 3000);
+    } else {
+      setNotificacion({ tipo: 'exito', mensaje: 'Ticket creado exitosamente' });
+      setTimeout(() => setNotificacion(null), 3000);
     }
+
+    setTextoLineas('');
+    setFormSeccionId(secciones.length > 0 ? secciones[0].id : '');
+    setFormTipo(TIPOS_TICKET[0]);
+    setModalAbierto(false);
+  };
+
+  // Crear ticket y cerrarlo inmediatamente
+  const manejarCrearYCerrarTicket = async (e) => {
+    e.preventDefault();
+
+    // Procesar las 3 líneas: URL, título, ID
+    const lineas = textoLineas.split('\n').map((l) => l.trim()).filter((l) => l !== '');
+
+    if (lineas.length < 3) {
+      setNotificacion({ tipo: 'error', mensaje: 'Debes ingresar URL, título y ID (una por línea)' });
+      setTimeout(() => setNotificacion(null), 3000);
+      return;
+    }
+
+    const url = lineas[0];
+    const titulo = lineas[1];
+    const id = lineas[2];
+
+    if (!url || !titulo || !id) {
+      setNotificacion({ tipo: 'error', mensaje: 'URL, título e ID son obligatorios' });
+      setTimeout(() => setNotificacion(null), 3000);
+      return;
+    }
+
+    const nuevoTicket = {
+      id,
+      titulo,
+      descripcion: '',
+      url,
+      prioridad: 'Baja',
+      tipo: formTipo,
+      comentarios: [],
+      fechas: [],
+      compartir: false,
+      seccionId: formSeccionId,
+      orden: 0,
+    };
+
+    const ok = await crearYCerrarTicket(nuevoTicket);
+
+    if (!ok) {
+      if (error) {
+        setNotificacion({ tipo: 'error', mensaje: error });
+        setTimeout(() => setNotificacion(null), 3000);
+      }
+      return;
+    }
+
+    setNotificacion({ tipo: 'exito', mensaje: 'Ticket creado y cerrado exitosamente' });
+    setTimeout(() => setNotificacion(null), 3000);
 
     setTextoLineas('');
     setFormSeccionId(secciones.length > 0 ? secciones[0].id : '');
@@ -371,8 +431,14 @@ export default function App() {
               </div>
 
               <div className="form-botones">
-                <button type="button" className="btn-cancelar" onClick={() => setModalAbierto(false)}>
-                  Cancelar
+                <button
+                  type="button"
+                  className={`btn-cerrar-creado ${!archivoCerradosListo ? 'disabled' : ''}`}
+                  onClick={manejarCrearYCerrarTicket}
+                  disabled={!archivoCerradosListo}
+                  title={!archivoCerradosListo ? 'Primero selecciona o crea un archivo de tickets cerrados' : 'Crear y cerrar'}
+                >
+                  Crear y cerrar
                 </button>
                 <button type="submit" className="btn-guardar-verde">
                   Crear ticket
