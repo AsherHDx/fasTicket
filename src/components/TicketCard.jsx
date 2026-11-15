@@ -23,7 +23,7 @@ const COLOR_PRIORIDAD = {
   Critica: '#dc2626',   // rojo más oscuro
 };
 
-export default function TicketCard({ ticket, onAccion, onEditarDescripcion, onCambiarPrioridad }) {
+export default function TicketCard({ ticket, onAccion, onEditarDescripcion, onCambiarPrioridad, archivoCerradosListo }) {
   const colorPrioridad = COLOR_PRIORIDAD[ticket.prioridad] || '#94a3b8';
   const esAtendido = ticket.atendido === true;
   const esResaltado = ticket.resaltado === true;
@@ -155,9 +155,10 @@ export default function TicketCard({ ticket, onAccion, onEditarDescripcion, onCa
             <CheckCircle size={16} />
           </button>
           <button
-            className="icon-btn btn-cerrar"
-            title="Cerrar ticket"
+            className={`icon-btn btn-cerrar ${!archivoCerradosListo ? 'disabled' : ''}`}
+            title={!archivoCerradosListo ? 'Selecciona un archivo de cerrados primero' : 'Cerrar ticket'}
             onClick={() => manejarAccion('cerrar')}
+            disabled={!archivoCerradosListo}
           >
             <X size={16} />
           </button>

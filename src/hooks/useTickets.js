@@ -8,6 +8,10 @@ import {
   obtenerHandleTickets,
   leerTickets,
   guardarTickets,
+  abrirArchivoCerradosExistente,
+  crearArchivoCerrados,
+  obtenerHandleCerrados,
+  agregarTicketCerrado,
 } from '../services/fileService.js';
 import { crearTicket, crearSeccion, PRIORIDADES } from '../types/index.js';
 import { validarTicketCompleto } from '../utils/validaciones.js';
@@ -28,6 +32,7 @@ export function useTickets() {
   const [seccionExpandida, setSeccionExpandida] = useState(null); // id de sección desplegada o null
   const [busqueda, setBusqueda] = useState('');
   const [archivoListo, setArchivoListo] = useState(false);
+  const [archivoCerradosListo, setArchivoCerradosListo] = useState(false);
   const [error, setError] = useState(null);
 
   /**
@@ -219,16 +224,71 @@ export function useTickets() {
   );
 
   /**
-   * Cierra un ticket (lo elimina de activos y se envía al archivo de cerrados).
+   * Abre un archivo de tickets cerrados existente.
+   */
+  const abrirArchivoCerrados = useCallback(async () => {
+    try {
+      const handle = await abrirArchivoCerradosExistente();
+      setArchivoCerradosListo(true);
+      setError(null);
+      return handle;
+    } catch (err) {
+      setError(err.message);
+      return null;
+    }
+  }, []);
+
+  /**
+   * Crea un nuevo archivo de tickets cerrados semanal.
+   */
+  const crearNuevoArchivoCerrados = useCallback(async (nombreArchivo) => {
+    try {
+      const handle = await crearArchivoCerrados(nombreArchivo);
+      setArchivoCerradosListo(true);
+      setError(null);
+      return handle;
+    } catch (err) {
+      setError(err.message);
+      return null;
+    }
+  }, []);
+
+  /**
+   * Cierra un ticket: lo elimina de activos, lo escribe en el archivo de cerrados
+   * y actualiza el resumen semanal.
    */
   const cerrarTicket = useCallback(
     async (id) => {
-      const actualizados = tickets.filter((t) => t.id !== id);
-      setTickets(actualizados);
-      setError(null);
-      return await persistir(actualizados);
+      const ticket = tickets.find((t) => t.id === id);
+      if (!ticket) return false;
+
+      // Si no hay archivo de cerrados seleccionado, no se puede cerrar
+      if (!obtenerHandleCerrados()) {
+        setError('Primero selecciona o crea un archivo de tickets cerrados.');
+        return false;
+      }
+
+      try {
+        // 1. Agregar al archivo de cerrados (con resumen automático)
+        await agregarTicketCerrado(obtenerHandleCerrados(), {
+          url: ticket.url,
+          titulo: ticket.titulo,
+          id: ticket.id,
+          tipo: ticket.tipo || 'Sin tipo',
+        });
+
+        // 2. Eliminar de tickets activos
+        const actualizados = tickets.filter((t) => t.id !== id);
+        setTickets(actualizados);
+        setError(null);
+        await persistir(actualizados);
+        return true;
+      } catch (err) {
+        setError(err.message);
+        return false;
+      }
     },
-    [tickets, persistir]
+    [tickets, persistir, obtenerHandleCerrados, agregarTicketCerrado]
   );
 
   /**
@@ -360,11 +420,14 @@ export function useTickets() {
     busqueda,
     setBusqueda,
     archivoListo,
+    archivoCerradosListo,
     error,
     PRIORIDADES,
 
     // Acciones
     inicializarArchivo,
+    abrirArchivoCerrados,
+    crearNuevoArchivoCerrados,
     obtenerTicketsPorSeccion,
     agregarTicket,
     editarTicket,

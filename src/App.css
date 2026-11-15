@@ -115,6 +115,30 @@ body {
   opacity: 0.9;
 }
 
+.btn-seleccionar-cerrados {
+  background-color: #6b7280;
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-seleccionar-cerrados:hover {
+  background-color: #4b5563;
+  opacity: 0.9;
+}
+
+.btn-seleccionar-cerrados:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+
 /* ===== Buscador ===== */
 .buscador-container {
   width: 100%;
@@ -636,6 +660,19 @@ body {
 .btn-cerrar:hover {
   border-color: var(--rojo);
   color: var(--rojo);
+}
+
+.btn-cerrar.disabled {
+  background-color: #4b5563;
+  border-color: #6b7280;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.btn-cerrar.disabled:hover {
+  border-color: #6b7280;
+  color: #9ca3af;
+  opacity: 1;
 }
 
 .btn-atencion.activo {

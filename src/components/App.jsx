@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { Plus, Clipboard } from 'lucide-react';
 import { useTickets } from '../hooks/useTickets.js';
-import { formatearFechaLegible } from '../utils/fechas.js';
+import { formatearFechaLegible, obtenerEtiquetaSemanaActual } from '../utils/fechas.js';
 import Buscador from './Buscador.jsx';
 import Seccion from './Seccion.jsx';
 
@@ -31,6 +31,9 @@ export default function App() {
     cambiarPrioridad,
     editarDescripcion,
     agregarComentario,
+    abrirArchivoCerrados,
+    crearNuevoArchivoCerrados,
+    archivoCerradosListo,
   } = useTickets();
 
   const [modalAbierto, setModalAbierto] = useState(false);
@@ -236,11 +239,27 @@ export default function App() {
           <button
             className="btn-seleccionar-archivo"
             onClick={inicializarArchivo}
-            title="Seleccionar archivo de tickets (.txt)"
+            title="Seleccionar archivo fuente de tickets (.txt)"
           >
             <Clipboard size={18} />
-            Seleccionar archivo
+            Seleccionar archivo fuente
           </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginLeft: 8 }}>
+            <button
+              className="btn-seleccionar-cerrados"
+              onClick={abrirArchivoCerrados}
+              title="Seleccionar archivo de tickets cerrados existente"
+            >
+              📂 Abrir cerrados
+            </button>
+            <button
+              className="btn-seleccionar-cerrados"
+              onClick={() => crearNuevoArchivoCerrados(obtenerEtiquetaSemanaActual())}
+              title="Crear archivo de tickets cerrados nuevo"
+            >
+              📄 Crear cerrados
+            </button>
+          </div>
         </div>
         <div className="header-centro">
           <Buscador
@@ -437,6 +456,7 @@ export default function App() {
                   onAccionTicket={manejarAccionTicket}
                   onEditarDescripcion={editarDescripcion}
                   onCambiarPrioridad={cambiarPrioridad}
+                  archivoCerradosListo={archivoCerradosListo}
                 />
               );
             })
