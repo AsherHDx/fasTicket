@@ -22,7 +22,7 @@ const COLOR_PRIORIDAD = {
   Critica: '#dc2626',   // rojo más oscuro
 };
 
-export default function TicketCard({ ticket, onAccion, onEditarDescripcion }) {
+export default function TicketCard({ ticket, onAccion, onEditarDescripcion, onCambiarPrioridad }) {
   const colorPrioridad = COLOR_PRIORIDAD[ticket.prioridad] || '#94a3b8';
   const esAtendido = ticket.atendido === true;
   const esResaltado = ticket.resaltado === true;
@@ -42,10 +42,14 @@ export default function TicketCard({ ticket, onAccion, onEditarDescripcion }) {
   };
 
   return (
-    <div
-      className={`ticket-card ${esResaltado ? 'resaltado' : ''} ${esAtendido ? 'atendido' : ''}`}
-      style={{ borderLeftColor: colorPrioridad }}
-    >
+    <div className="ticket-card-wrapper">
+      <div
+        className="ticket-priority-border"
+        style={{ backgroundColor: colorPrioridad }}
+        onClick={() => onCambiarPrioridad(ticket.id)}
+        title="Cambiar prioridad"
+      />
+      <div className={`ticket-card-content ${esResaltado ? 'resaltado' : ''} ${esAtendido ? 'atendido' : ''}`}>
       {/* Información central */}
       <div className="ticket-info">
         <div className="ticket-field ticket-titulo">
@@ -148,6 +152,7 @@ export default function TicketCard({ ticket, onAccion, onEditarDescripcion }) {
           </button>
         </div>
       </div>
+    </div>
     </div>
   );
 }

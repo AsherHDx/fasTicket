@@ -27,6 +27,7 @@ export default function App() {
     toggleAtendido,
     toggleAtencion,
     toggleCompartido,
+    cambiarPrioridad,
     editarDescripcion,
   } = useTickets();
 
@@ -347,6 +348,7 @@ export default function App() {
                   }}
                   onAccionTicket={manejarAccionTicket}
                   onEditarDescripcion={editarDescripcion}
+                  onCambiarPrioridad={cambiarPrioridad}
                 />
               );
             })

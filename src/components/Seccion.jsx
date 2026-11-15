@@ -14,6 +14,7 @@ export default function Seccion({
   onEditarTitulo,
   onAccionTicket,
   onEditarDescripcion,
+  onCambiarPrioridad,
 }) {
   const [editando, setEditando] = useState(false);
   const [valorTitulo, setValorTitulo] = useState(seccion.titulo);
@@ -88,6 +89,7 @@ export default function Seccion({
                     onEditarDescripcion={(id, nuevaDescripcion) =>
                       onEditarDescripcion(id, nuevaDescripcion)
                     }
+                    onCambiarPrioridad={onCambiarPrioridad}
                   />
                 </div>
               ))}

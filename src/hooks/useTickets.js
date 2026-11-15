@@ -246,6 +246,26 @@ export function useTickets() {
   }, [tickets, persistir]);
 
   /**
+   * Cambia la prioridad de un ticket en ciclo: Baja -> Media -> Alta -> Baja.
+   */
+  const cambiarPrioridad = useCallback(async (id) => {
+    const ordenPrioridades = ['Baja', 'Media', 'Alta'];
+    const ticket = tickets.find((t) => t.id === id);
+    if (!ticket) return false;
+
+    const indiceActual = ordenPrioridades.indexOf(ticket.prioridad);
+    const siguienteIndice = (indiceActual + 1) % ordenPrioridades.length;
+    const nuevaPrioridad = ordenPrioridades[siguienteIndice];
+
+    const actualizados = tickets.map((t) =>
+      t.id === id ? { ...t, prioridad: nuevaPrioridad, fechaActualizacion: new Date().toISOString() } : t
+    );
+    setTickets(actualizados);
+    setError(null);
+    return await persistir(actualizados);
+  }, [tickets, persistir]);
+
+  /**
    * Edita la descripción de un ticket inline.
    */
   const editarDescripcion = useCallback(async (id, nuevaDescripcion) => {
@@ -301,6 +321,7 @@ export function useTickets() {
     toggleAtendido,
     toggleAtencion,
     toggleCompartido,
+    cambiarPrioridad,
     editarDescripcion,
     moverTicket,
     reordenarSecciones,

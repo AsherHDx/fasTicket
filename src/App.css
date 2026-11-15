@@ -419,30 +419,61 @@ body {
 }
 
 /* ===== Tarjeta de ticket ===== */
-.ticket-card {
+.ticket-card-wrapper {
+  display: flex;
+  width: 100%;
+}
+
+.ticket-priority-border {
+  width: 16px;
+  border-radius: 8px 0 0 8px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.ticket-priority-border:hover {
+  opacity: 0.8;
+}
+
+.ticket-card-content {
   display: flex;
   align-items: flex-start;
   gap: 14px;
-  padding: 16px 16px 16px 24px;
+  padding: 16px;
   background-color: var(--fondo-tarjeta);
   border: 1px solid var(--borde);
-  border-radius: 8px;
-  border-left: 16px solid transparent;
+  border-radius: 0 8px 8px 0;
   transition: all 0.2s ease;
+  flex: 1;
+  min-width: 0;
 }
 
-.ticket-card:hover {
+.ticket-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ticket-acciones {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+  flex-shrink: 0;
+}
+
+.ticket-card-content:hover {
   border-color: #475569;
 }
 
 /* Resaltado (atención) */
-.ticket-card.resaltado {
+.ticket-card-content.resaltado {
   background-color: #2d1b1b;
   border-color: #ea580c;
 }
 
 /* Atendido - opacidad reducida */
-.ticket-card.atendido {
+.ticket-card-content.atendido {
   opacity: 0.6;
   filter: grayscale(0.4);
 }
