@@ -1,6 +1,6 @@
 /**
  * Hook personalizado para manejar la lógica de tickets y secciones de fasTicket.
- * Incluye CRUD, búsqueda, drag & drop entre secciones y persistencia automática.
+ * Incluye CRUD, búsqueda y persistencia automática.
  */
 import { useState, useCallback, useEffect } from 'react';
 import {
