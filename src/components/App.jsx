@@ -38,10 +38,8 @@ export default function App() {
     new Set(secciones.map((s) => s.id))
   );
 
-  // Qué secciones son visibles (todas por defecto)
-  const [seccionesVisibles, setSeccionesVisibles] = useState(
-    new Set(secciones.map((s) => s.id))
-  );
+  // Qué sección está visible (null = mostrar todas, string = id de una sección)
+  const [seccionVisible, setSeccionVisible] = useState(null);
 
   // Formulario de crear ticket (modal)
   const [formTicket, setFormTicket] = useState({
@@ -125,17 +123,9 @@ export default function App() {
     setModalAbierto(false);
   };
 
-  // Toggle visibilidad de una sección (checkbox: múltiples a la vez)
+  // Seleccionar qué sección mostrar (radiobutton: solo una a la vez)
   const toggleSeccionVisible = (id) => {
-    setSeccionesVisibles((prev) => {
-      const nuevo = new Set(prev);
-      if (nuevo.has(id)) {
-        nuevo.delete(id);
-      } else {
-        nuevo.add(id);
-      }
-      return nuevo;
-    });
+    setSeccionVisible((prev) => (prev === id ? null : id));
   };
 
   // Toggle expansión de una sección
@@ -198,14 +188,26 @@ export default function App() {
         </div>
       </header>
 
-      {/* Checkboxes de visibilidad de secciones (múltiples a la vez) */}
+      {/* Radiobuttons de visibilidad de secciones (solo una a la vez) */}
       <div className="secciones-visibilidad">
-        <span className="visibilidad-label">Mostrar secciones:</span>
+        <span className="visibilidad-label">Mostrar sección:</span>
+        <label className="radio-label">
+          <input
+            type="radio"
+            name="seccion-visible"
+            value=""
+            checked={seccionVisible === null}
+            onChange={() => setSeccionVisible(null)}
+          />
+          Todas
+        </label>
         {secciones.map((seccion) => (
-          <label key={seccion.id} className="checkbox-label">
+          <label key={seccion.id} className="radio-label">
             <input
-              type="checkbox"
-              checked={seccionesVisibles.has(seccion.id)}
+              type="radio"
+              name="seccion-visible"
+              value={seccion.id}
+              checked={seccionVisible === seccion.id}
               onChange={() => toggleSeccionVisible(seccion.id)}
             />
             {seccion.titulo}
@@ -320,7 +322,9 @@ export default function App() {
           </div>
         ) : (
           secciones
-            .filter((seccion) => seccionesVisibles.has(seccion.id))
+            .filter(
+              (seccion) => seccionVisible === null || seccionVisible === seccion.id
+            )
             .map((seccion) => {
               const ticketsSeccion = obtenerTicketsPorSeccion(seccion.id);
               const expandida = seccionesExpandidas.has(seccion.id);

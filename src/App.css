@@ -210,42 +210,42 @@ body {
   }
 }
 
-/* ===== Visibilidad de secciones (checkboxes) ===== */
+/* ===== Visibilidad de secciones (radiobuttons) ===== */
 .secciones-visibilidad {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 0;
+  gap: 16px;
+  padding: 12px 0;
   border-bottom: 1px solid var(--borde);
-  margin-bottom: 16px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
 }
 
 .visibilidad-label {
-  font-size: 13px;
+  font-size: 15px;
   color: var(--texto-secundario);
   font-weight: 600;
-  margin-right: 8px;
+  margin-right: 12px;
 }
 
-.checkbox-label {
+.radio-label {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 13px;
+  gap: 8px;
+  font-size: 15px;
   color: var(--texto);
   cursor: pointer;
   white-space: nowrap;
 }
 
-.checkbox-label input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
+.radio-label input[type="radio"] {
+  width: 20px;
+  height: 20px;
   accent-color: var(--verde);
   cursor: pointer;
 }
 
-.checkbox-label:hover {
+.radio-label:hover {
   color: var(--texto-secundario);
 }
 
@@ -369,12 +369,12 @@ body {
 .ticket-card {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 12px 12px 12px 20px;
+  gap: 14px;
+  padding: 16px 16px 16px 24px;
   background-color: var(--fondo-tarjeta);
   border: 1px solid var(--borde);
   border-radius: 8px;
-  border-left: 14px solid transparent;
+  border-left: 16px solid transparent;
   transition: all 0.2s ease;
 }
 
@@ -400,9 +400,9 @@ body {
 }
 
 .ticket-field {
-  margin-bottom: 4px;
-  font-size: 13px;
-  line-height: 1.4;
+  margin-bottom: 5px;
+  font-size: 16px;
+  line-height: 1.5;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -411,12 +411,13 @@ body {
 .ticket-field.ticket-titulo {
   font-weight: 600;
   color: var(--texto);
-  font-size: 14px;
+  font-size: 18px;
 }
 
 .ticket-field.ticket-id {
   color: #60a5fa;
   font-family: monospace;
+  font-size: 16px;
 }
 
 .ticket-field.ticket-descripcion {
@@ -428,6 +429,20 @@ body {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   cursor: pointer;
+  font-size: 16px;
+}
+
+.ticket-field.ticket-tipo {
+  color: #a78bfa;
+  font-size: 12px;
+}
+
+.field-label {
+  font-weight: 600;
+  color: var(--texto-secundario);
+  margin-right: 6px;
+  font-size: 11px;
+  text-transform: uppercase;
 }
 
 .ticket-field.ticket-descripcion:hover {
@@ -483,7 +498,7 @@ body {
 .ticket-acciones {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   align-items: flex-start;
 }
 

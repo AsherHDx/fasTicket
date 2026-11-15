@@ -83,11 +83,6 @@ export default function TicketCard({ ticket, onAccion, onEditarDescripcion }) {
             <Edit size={12} className="icon-editar-desc" />
           </div>
         )}
-        {ticket.tipo && (
-          <div className="ticket-field ticket-tipo">
-            <span className="field-label">Tipo:</span> {ticket.tipo}
-          </div>
-        )}
       </div>
 
       {/* Botones iconos a la derecha */}
