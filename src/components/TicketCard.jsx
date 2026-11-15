@@ -14,6 +14,7 @@ import {
   MessageSquare,
   Edit,
 } from 'lucide-react';
+import { formatearFechaLegible } from '../utils/fechas.js';
 
 const COLOR_PRIORIDAD = {
   Baja: '#22c55e',      // verde
@@ -88,6 +89,24 @@ export default function TicketCard({ ticket, onAccion, onEditarDescripcion, onCa
           </div>
         )}
       </div>
+
+      {/* Fechas de compartir (mostrado a la izquierda de los botones) */}
+      {ticket.fechas && ticket.fechas.length > 0 ? (
+        <div className="ticket-fechas-compartido">
+          <div className="leyenda-compartido">compartido por última vez:</div>
+          <div className="fecha-compartido-simple" title="Ver todas las fechas de compartir">
+            {formatearFechaLegible(ticket.fechas[ticket.fechas.length - 1])}
+          </div>
+          <div className="fecha-compartido-detalle">
+            <div className="leyenda-detalle">Fechas en las que se compartió:</div>
+            {[...ticket.fechas].reverse().map((fecha, index) => (
+              <div key={index} className="fecha-item">
+                {formatearFechaLegible(fecha)}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {/* Botones iconos a la derecha */}
       <div className="ticket-acciones">
