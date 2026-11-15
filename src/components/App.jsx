@@ -41,17 +41,21 @@ export default function App() {
   // Qué sección está visible (null = mostrar todas, string = id de una sección)
   const [seccionVisible, setSeccionVisible] = useState(null);
 
+  // Tipos de ticket disponibles
+  const TIPOS_TICKET = [
+    'incidencia',
+    'solicitud',
+    'consulta',
+    'seguridad',
+    'configuración',
+    'proyectos',
+    'infraestructura',
+  ];
+
   // Formulario de crear ticket (modal)
-  const [formTicket, setFormTicket] = useState({
-    id: '',
-    titulo: '',
-    descripcion: '',
-    url: '',
-    prioridad: 'Media',
-    tipo: '',
-    seccionId: '',
-    compartir: false,
-  });
+  const [textoLineas, setTextoLineas] = useState('');
+  const [formSeccionId, setFormSeccionId] = useState(secciones.length > 0 ? secciones[0].id : '');
+  const [formTipo, setFormTipo] = useState(TIPOS_TICKET[0]);
 
   // Copiar al portapapeles
   const copiarPortapapeles = async (texto) => {
@@ -105,21 +109,48 @@ export default function App() {
   // Guardar nuevo ticket desde el modal
   const manejarGuardarTicket = async (e) => {
     e.preventDefault();
-    const seccionId = formTicket.seccionId || (secciones.length > 0 ? secciones[0].id : '');
-    await agregarTicket({
-      ...formTicket,
-      seccionId,
-    });
-    setFormTicket({
-      id: '',
-      titulo: '',
+
+    // Procesar las 3 líneas: URL, título, ID
+    const lineas = textoLineas.split('\n').map((l) => l.trim()).filter((l) => l !== '');
+
+    if (lineas.length < 3) {
+      setNotificacion({ tipo: 'error', mensaje: 'Debes ingresar URL, título y ID (una por línea)' });
+      setTimeout(() => setNotificacion(null), 3000);
+      return;
+    }
+
+    const url = lineas[0];
+    const titulo = lineas[1];
+    const id = lineas[2];
+
+    if (!url || !titulo || !id) {
+      setNotificacion({ tipo: 'error', mensaje: 'URL, título e ID son obligatorios' });
+      setTimeout(() => setNotificacion(null), 3000);
+      return;
+    }
+
+    const nuevoTicket = {
+      id,
+      titulo,
       descripcion: '',
-      url: '',
-      prioridad: 'Media',
-      tipo: '',
-      seccionId: '',
+      url,
+      prioridad: 'Baja',
+      tipo: formTipo,
+      comentarios: [],
+      fechas: [],
       compartir: false,
-    });
+      seccionId: formSeccionId,
+      orden: 0,
+    };
+
+    const ok = await agregarTicket(nuevoTicket);
+    if (!ok) {
+      return;
+    }
+
+    setTextoLineas('');
+    setFormSeccionId(secciones.length > 0 ? secciones[0].id : '');
+    setFormTipo(TIPOS_TICKET[0]);
     setModalAbierto(false);
   };
 
@@ -222,90 +253,61 @@ export default function App() {
             <h3>Nuevo ticket</h3>
             <form onSubmit={manejarGuardarTicket}>
               <div className="form-grupo">
-                <label>ID *</label>
-                <input
-                  required
-                  value={formTicket.id}
-                  onChange={(e) => setFormTicket({ ...formTicket, id: e.target.value })}
-                />
-              </div>
-              <div className="form-grupo">
-                <label>Título *</label>
-                <input
-                  required
-                  value={formTicket.titulo}
-                  onChange={(e) => setFormTicket({ ...formTicket, titulo: e.target.value })}
-                />
-              </div>
-              <div className="form-grupo">
-                <label>Descripción</label>
+                <label>Datos del ticket (una por línea) *</label>
                 <textarea
-                  value={formTicket.descripcion}
-                  onChange={(e) => setFormTicket({ ...formTicket, descripcion: e.target.value })}
+                  className="textarea-datos-ticket"
+                  value={textoLineas}
+                  onChange={(e) => setTextoLineas(e.target.value)}
+                  placeholder="URL del ticket\nTítulo del ticket\nID del ticket"
+                  rows="4"
                 />
+                <span className="campo-ayuda">
+                  Línea 1: URL | Línea 2: Título | Línea 3: ID
+                </span>
               </div>
+
               <div className="form-grupo">
-                <label>URL</label>
-                <input
-                  value={formTicket.url}
-                  onChange={(e) => setFormTicket({ ...formTicket, url: e.target.value })}
-                />
-              </div>
-              <div className="form-grupo">
-                <label>Tipo *</label>
-                <input
-                  required
-                  value={formTicket.tipo}
-                  onChange={(e) => setFormTicket({ ...formTicket, tipo: e.target.value })}
-                  placeholder="Ej. Incidencia, Solicitud, Configuración"
-                />
-              </div>
-              <div className="form-grupo">
-                <label>Prioridad *</label>
-                <select
-                  required
-                  value={formTicket.prioridad}
-                  onChange={(e) => setFormTicket({ ...formTicket, prioridad: e.target.value })}
-                >
-                  {PRIORIDADES.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-grupo">
-                <label>Sección</label>
-                <select
-                  value={formTicket.seccionId}
-                  onChange={(e) => setFormTicket({ ...formTicket, seccionId: e.target.value })}
-                >
-                  <option value="">Sin sección (General)</option>
+                <label>Sección *</label>
+                <div className="radio-group">
                   {secciones.map((s) => (
-                    <option key={s.id} value={s.id}>
+                    <label key={s.id} className="radio-label">
+                      <input
+                        type="radio"
+                        name="form-seccion"
+                        value={s.id}
+                        checked={formSeccionId === s.id}
+                        onChange={() => setFormSeccionId(s.id)}
+                      />
                       {s.titulo}
-                    </option>
+                    </label>
                   ))}
-                </select>
+                </div>
               </div>
-              <div className="form-check">
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={formTicket.compartir}
-                    onChange={(e) =>
-                      setFormTicket({ ...formTicket, compartir: e.target.checked })
-                    }
-                  />
-                  Compartir ticket
-                </label>
+
+              <div className="form-grupo">
+                <label>Tipo de ticket *</label>
+                <div className="radio-group">
+                  {TIPOS_TICKET.map((t) => (
+                    <label key={t} className="radio-label">
+                      <input
+                        type="radio"
+                        name="form-tipo"
+                        value={t}
+                        checked={formTipo === t}
+                        onChange={() => setFormTipo(t)}
+                      />
+                      {t}
+                    </label>
+                  ))}
+                </div>
               </div>
+
               <div className="form-botones">
                 <button type="button" className="btn-cancelar" onClick={() => setModalAbierto(false)}>
                   Cancelar
                 </button>
                 <button type="submit" className="btn-guardar-verde">
-                  Guardar ticket
+                  Crear ticket
                 </button>
               </div>
             </form>

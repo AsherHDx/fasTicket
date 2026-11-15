@@ -249,6 +249,59 @@ body {
   color: var(--texto-secundario);
 }
 
+/* ===== Formulario nuevo ticket ===== */
+.textarea-datos-ticket {
+  width: 100%;
+  padding: 12px;
+  background-color: var(--fondo);
+  border: 1px solid var(--borde);
+  border-radius: 6px;
+  color: var(--texto);
+  font-family: monospace;
+  font-size: 14px;
+  resize: vertical;
+}
+
+.textarea-datos-ticket:focus {
+  outline: none;
+  border-color: var(--verde);
+}
+
+.campo-ayuda {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--texto-secundario);
+}
+
+.radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--texto);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.radio-label input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--verde);
+  cursor: pointer;
+}
+
+.radio-label:hover {
+  color: var(--texto-secundario);
+}
+
 /* ===== Estado vacío ===== */
 .estado-vacio {
   text-align: center;
@@ -303,7 +356,7 @@ body {
 
 .seccion-titulo-texto {
   font-weight: 600;
-  font-size: 16px;
+  font-size: 20px;
   color: var(--texto);
 }
 
