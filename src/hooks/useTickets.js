@@ -103,8 +103,8 @@ export function useTickets() {
       );
     }
 
-    // Ordenar por campo orden
-    return filtrados.sort((a, b) => (a.orden || 0) - (b.orden || 0));
+    // Ordenar por campo orden descendente: mayor orden se muestra primero
+    return filtrados.sort((a, b) => (b.orden || 0) - (a.orden || 0));
   }, [tickets, busqueda]);
 
   /**
@@ -482,6 +482,44 @@ export function useTickets() {
     setSecciones(nuevasSecciones);
   }, []);
 
+  /**
+   * Aumenta en 1 el campo "orden" de un ticket y lo guarda inmediatamente en el archivo txt.
+   * Orden mayor = se muestra antes que los de orden menor (orden ascendente).
+   */
+  const subirOrden = useCallback(async (id) => {
+    const actualizados = tickets.map((t) =>
+      t.id === id
+        ? {
+            ...t,
+            orden: (t.orden || 0) + 1,
+            fechaActualizacion: new Date().toISOString(),
+          }
+        : t
+    );
+    setTickets(actualizados);
+    setError(null);
+    return await persistir(actualizados);
+  }, [tickets, persistir]);
+
+  /**
+   * Disminuye en 1 el campo "orden" de un ticket (no puede ser menor a 0)
+   * y lo guarda inmediatamente en el archivo txt.
+   */
+  const bajarOrden = useCallback(async (id) => {
+    const actualizados = tickets.map((t) =>
+      t.id === id
+        ? {
+            ...t,
+            orden: Math.max(0, (t.orden || 0) - 1),
+            fechaActualizacion: new Date().toISOString(),
+          }
+        : t
+    );
+    setTickets(actualizados);
+    setError(null);
+    return await persistir(actualizados);
+  }, [tickets, persistir]);
+
   return {
     // Estado
     secciones,
@@ -512,6 +550,8 @@ export function useTickets() {
     agregarComentario,
     moverTicket,
     reordenarSecciones,
+    subirOrden,
+    bajarOrden,
     crearYCerrarTicket,
   };
 }

@@ -686,6 +686,16 @@ body {
   color: #a78bfa;
 }
 
+.btn-subir-orden:hover {
+  border-color: #22c55e;
+  color: #22c55e;
+}
+
+.btn-bajar-orden:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
 /* ===== Modal ===== */
 .modal-overlay {
   position: fixed;

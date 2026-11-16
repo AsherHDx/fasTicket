@@ -13,6 +13,8 @@ import {
   AlertTriangle,
   MessageSquare,
   Edit,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react';
 import { formatearFechaLegible } from '../utils/fechas.js';
 
@@ -126,6 +128,13 @@ export default function TicketCard({ ticket, onAccion, onEditarDescripcion, onCa
           >
             <FileText size={16} />
           </button>
+          <button
+            className="icon-btn btn-subir-orden"
+            title="Subir orden (mostrar antes)"
+            onClick={() => manejarAccion('subir-orden')}
+          >
+            <ChevronUp size={16} />
+          </button>
         </div>
 
         {/* Fila 2 */}
@@ -179,6 +188,13 @@ export default function TicketCard({ ticket, onAccion, onEditarDescripcion, onCa
             onClick={() => manejarAccion('mensajes')}
           >
             <MessageSquare size={16} />
+          </button>
+          <button
+            className="icon-btn btn-bajar-orden"
+            title="Bajar orden (mostrar después)"
+            onClick={() => manejarAccion('bajar-orden')}
+          >
+            <ChevronDown size={16} />
           </button>
         </div>
       </div>

@@ -31,6 +31,8 @@ export default function App() {
     cambiarPrioridad,
     editarDescripcion,
     agregarComentario,
+    subirOrden,
+    bajarOrden,
     abrirArchivoCerrados,
     crearNuevoArchivoCerrados,
     archivoCerradosListo,
@@ -119,6 +121,12 @@ export default function App() {
         }
         break;
       }
+      case 'subir-orden':
+        await subirOrden(id);
+        break;
+      case 'bajar-orden':
+        await bajarOrden(id);
+        break;
       default:
         break;
     }
