@@ -508,7 +508,7 @@ body {
 }
 
 .ticket-field {
-  margin-bottom: 5px;
+  margin-bottom: 3px;
   font-size: 16px;
   line-height: 1.5;
   overflow: hidden;
@@ -519,13 +519,13 @@ body {
 .ticket-field.ticket-titulo {
   font-weight: 600;
   color: var(--texto);
-  font-size: 18px;
+  font-size: 17px;
 }
 
 .ticket-field.ticket-id {
   color: #60a5fa;
   font-family: monospace;
-  font-size: 16px;
+  font-size: 15px;
 }
 
 .ticket-field.ticket-descripcion {
@@ -635,26 +635,9 @@ body {
   color: var(--texto);
 }
 
-.btn-copiar-url:hover {
-  border-color: #3b82f6;
-  color: #3b82f6;
-}
-
 .btn-copy-datos:hover {
   border-color: #8b5cf6;
   color: #8b5cf6;
-}
-
-.btn-compartido:active {
-  background-color: #3b82f6;
-  border-color: #3b82f6;
-  color: #fff;
-}
-
-.btn-atendido.activo {
-  background-color: var(--verde);
-  border-color: var(--verde);
-  color: #fff;
 }
 
 .btn-cerrar:hover {
@@ -684,16 +667,6 @@ body {
 .btn-mensajes:hover {
   border-color: #a78bfa;
   color: #a78bfa;
-}
-
-.btn-subir-orden:hover {
-  border-color: #22c55e;
-  color: #22c55e;
-}
-
-.btn-bajar-orden:hover {
-  border-color: #ef4444;
-  color: #ef4444;
 }
 
 /* ===== Modal ===== */

@@ -5,16 +5,11 @@
  */
 import { useState } from 'react';
 import {
-  Copy,
   FileText,
-  Share2,
-  CheckCircle,
   X,
   AlertTriangle,
   MessageSquare,
   Edit,
-  ChevronUp,
-  ChevronDown,
 } from 'lucide-react';
 import { formatearFechaLegible } from '../utils/fechas.js';
 
@@ -115,11 +110,11 @@ export default function TicketCard({ ticket, onAccion, onEditarDescripcion, onCa
         {/* Fila 1 */}
         <div className="accion-fila">
           <button
-            className="icon-btn btn-copy-url"
-            title="Copiar URL"
-            onClick={() => manejarAccion('copiar-url')}
+            className="icon-btn btn-mensajes"
+            title="Ver mensajes"
+            onClick={() => manejarAccion('mensajes')}
           >
-            <Copy size={16} />
+            <MessageSquare size={16} />
           </button>
           <button
             className="icon-btn btn-copy-datos"
@@ -128,52 +123,9 @@ export default function TicketCard({ ticket, onAccion, onEditarDescripcion, onCa
           >
             <FileText size={16} />
           </button>
-          <button
-            className="icon-btn btn-subir-orden"
-            title="Subir orden (mostrar antes)"
-            onClick={() => manejarAccion('subir-orden')}
-          >
-            <ChevronUp size={16} />
-          </button>
         </div>
 
         {/* Fila 2 */}
-        <div className="accion-fila">
-          <button
-            className="icon-btn btn-compartido"
-            title="Marcar como compartido"
-            onClick={() => manejarAccion('compartido')}
-            style={{ transform: 'scale(1)' }}
-            onMouseDown={(e) => {
-              e.currentTarget.style.transform = 'scale(0.9)';
-            }}
-            onMouseUp={(e) => {
-              e.currentTarget.style.transform = 'scale(1)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'scale(1)';
-            }}
-          >
-            <Share2 size={16} />
-          </button>
-          <button
-            className={`icon-btn btn-atendido ${esAtendido ? 'activo' : ''}`}
-            title={esAtendido ? 'Marcar como no atendido' : 'Marcar como atendido'}
-            onClick={() => manejarAccion('atendido')}
-          >
-            <CheckCircle size={16} />
-          </button>
-          <button
-            className={`icon-btn btn-cerrar ${!archivoCerradosListo ? 'disabled' : ''}`}
-            title={!archivoCerradosListo ? 'Selecciona un archivo de cerrados primero' : 'Cerrar ticket'}
-            onClick={() => manejarAccion('cerrar')}
-            disabled={!archivoCerradosListo}
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        {/* Fila 3 */}
         <div className="accion-fila">
           <button
             className={`icon-btn btn-atencion ${esResaltado ? 'activo' : ''}`}
@@ -183,18 +135,12 @@ export default function TicketCard({ ticket, onAccion, onEditarDescripcion, onCa
             <AlertTriangle size={16} />
           </button>
           <button
-            className="icon-btn btn-mensajes"
-            title="Ver mensajes"
-            onClick={() => manejarAccion('mensajes')}
+            className={`icon-btn btn-cerrar ${!archivoCerradosListo ? 'disabled' : ''}`}
+            title={!archivoCerradosListo ? 'Selecciona un archivo de cerrados primero' : 'Cerrar ticket'}
+            onClick={() => manejarAccion('cerrar')}
+            disabled={!archivoCerradosListo}
           >
-            <MessageSquare size={16} />
-          </button>
-          <button
-            className="icon-btn btn-bajar-orden"
-            title="Bajar orden (mostrar después)"
-            onClick={() => manejarAccion('bajar-orden')}
-          >
-            <ChevronDown size={16} />
+            <X size={16} />
           </button>
         </div>
       </div>

@@ -31,8 +31,6 @@ export default function App() {
     cambiarPrioridad,
     editarDescripcion,
     agregarComentario,
-    subirOrden,
-    bajarOrden,
     abrirArchivoCerrados,
     crearNuevoArchivoCerrados,
     archivoCerradosListo,
@@ -86,11 +84,6 @@ export default function App() {
   // Manejar acciones de las tarjetas de ticket
   const manejarAccionTicket = async (tipo, id) => {
     switch (tipo) {
-      case 'copiar-url': {
-        const t = tickets.find((x) => x.id === id);
-        if (t) await copiarPortapapeles(t.url || '');
-        break;
-      }
       case 'copiar-datos': {
         const t = tickets.find((x) => x.id === id);
         if (t) {
@@ -99,14 +92,6 @@ export default function App() {
         }
         break;
       }
-      case 'compartido':
-        await agregarCompartido(id);
-        setNotificacion({ tipo: 'exito', mensaje: 'Fecha añadida a las fechas del ticket' });
-        setTimeout(() => setNotificacion(null), 2000);
-        break;
-      case 'atendido':
-        await toggleAtendido(id);
-        break;
       case 'cerrar':
         await cerrarTicket(id);
         break;
@@ -121,12 +106,6 @@ export default function App() {
         }
         break;
       }
-      case 'subir-orden':
-        await subirOrden(id);
-        break;
-      case 'bajar-orden':
-        await bajarOrden(id);
-        break;
       default:
         break;
     }
