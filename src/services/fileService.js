@@ -243,15 +243,15 @@ export function obtenerHandleCerrados() {
 /**
  * Agrega un ticket cerrado al archivo semanal y actualiza el resumen automáticamente.
  * Formato por ticket (3 líneas):
- *   <URL>
- *   <Título>
- *   <ID>
+ *   <Código>
+ *   <Asunto>
+ *   <Tipo>
  *   (línea en blanco)
  *   (línea en blanco)
  *
  * El resumen se recalcula sumando 1 al conteo del tipo del ticket cerrado.
  * @param {FileSystemFileHandle} handle - Handle del archivo de cerrados.
- * @param {Object} ticketCerrado - Objeto con { url, titulo, id, tipo }.
+ * @param {Object} ticketCerrado - Objeto con { codigo, asunto, tipo }.
  * @returns {Promise<void>}
  */
 export async function agregarTicketCerrado(handle, ticketCerrado) {
@@ -259,7 +259,7 @@ export async function agregarTicketCerrado(handle, ticketCerrado) {
     throw new Error('No se proporcionó un handle de archivo válido para tickets cerrados.');
   }
 
-  const { url, titulo, id, tipo } = ticketCerrado;
+  const { codigo, asunto, tipo } = ticketCerrado;
 
   // Actualizar conteo en memoria: sumar 1 al tipo del nuevo ticket
   const tipoT = tipo || 'Sin tipo';
@@ -274,7 +274,7 @@ export async function agregarTicketCerrado(handle, ticketCerrado) {
     contenidoExistente = '';
   }
 
-  const bloqueTicket = `${url}\n${titulo}\n${id}\n\n\n`;
+  const bloqueTicket = `${codigo}\n${asunto}\n${tipo}\n\n\n`;
 
   const indiceResumen = contenidoExistente.indexOf('RESUMEN FINAL');
 

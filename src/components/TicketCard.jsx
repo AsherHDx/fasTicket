@@ -11,30 +11,27 @@ import {
   MessageSquare,
   Edit,
 } from 'lucide-react';
-import { formatearFechaLegible } from '../utils/fechas.js';
 
 const COLOR_PRIORIDAD = {
-  Baja: '#22c55e',      // verde
-  Media: '#eab308',     // amarillo
-  Alta: '#ef4444',      // rojo
-  Critica: '#dc2626',   // rojo más oscuro
+  baja: '#22c55e',
+  media: '#eab308',
+  alta: '#ef4444',
+  critica: '#dc2626',
 };
 
 export default function TicketCard({ ticket, onAccion, onEditarDescripcion, onCambiarPrioridad, archivoCerradosListo }) {
-  const colorPrioridad = COLOR_PRIORIDAD[ticket.prioridad] || '#94a3b8';
-  const esAtendido = ticket.atendido === true;
-  const esResaltado = ticket.resaltado === true;
-  const esCompartido = ticket.compartir === true;
+  const colorPrioridad = COLOR_PRIORIDAD[ticket.Prioridad] || '#94a3b8';
+  const esResaltado = ticket.Resaltado === true;
   const [editandoDescripcion, setEditandoDescripcion] = useState(false);
-  const [valorDescripcion, setValorDescripcion] = useState(ticket.descripcion || '');
+  const [valorDescripcion, setValorDescripcion] = useState(ticket.Descripcion || '');
 
   const manejarAccion = (tipo) => {
-    onAccion(tipo, ticket.id);
+    onAccion(tipo, ticket.Codigo);
   };
 
   const guardarDescripcion = async () => {
-    if (valorDescripcion.trim() !== ticket.descripcion) {
-      await onEditarDescripcion(ticket.id, valorDescripcion.trim());
+    if (valorDescripcion.trim() !== ticket.Descripcion) {
+      await onEditarDescripcion(ticket.Codigo, valorDescripcion.trim());
     }
     setEditandoDescripcion(false);
   };
@@ -44,107 +41,83 @@ export default function TicketCard({ ticket, onAccion, onEditarDescripcion, onCa
       <div
         className="ticket-priority-border"
         style={{ backgroundColor: colorPrioridad }}
-        onClick={() => onCambiarPrioridad(ticket.id)}
+        onClick={() => onCambiarPrioridad(ticket.Codigo)}
         title="Cambiar prioridad"
       />
-      <div className={`ticket-card-content ${esResaltado ? 'resaltado' : ''} ${esAtendido ? 'atendido' : ''}`}>
-      {/* Información central */}
-      <div className="ticket-info">
-        <div className="ticket-field ticket-titulo">
-          <span className="field-label">Título:</span> {ticket.titulo}
-        </div>
-        <div className="ticket-field ticket-id">
-          <span className="field-label">ID:</span> {ticket.id}
-        </div>
-        {editandoDescripcion ? (
-          <div className="ticket-field ticket-descripcion-editable">
-            <input
-              className="input-descripcion"
-              autoFocus
-              value={valorDescripcion}
-              onChange={(e) => setValorDescripcion(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') guardarDescripcion();
-                if (e.key === 'Escape') {
-                  setValorDescripcion(ticket.descripcion || '');
-                  setEditandoDescripcion(false);
-                }
-              }}
-              onBlur={guardarDescripcion}
-            />
+      <div className={`ticket-card-content ${esResaltado ? 'resaltado' : ''}`}>
+        <div className="ticket-info">
+          <div className="ticket-field ticket-titulo">
+            <span className="field-label">Asunto:</span> {ticket.Asunto}
           </div>
-        ) : (
-          <div
-            className="ticket-field ticket-descripcion"
-            onClick={() => setEditandoDescripcion(true)}
-            style={{ cursor: 'pointer' }}
-            title="Haz clic para editar la descripción"
-          >
-            <span className="field-label">Descripción:</span>
-            {ticket.descripcion || 'Sin descripción'}
-            <Edit size={12} className="icon-editar-desc" />
+          <div className="ticket-field ticket-codigo">
+            <span className="field-label">Código:</span> {ticket.Codigo}
           </div>
-        )}
-      </div>
-
-      {/* Fechas de compartir (mostrado a la izquierda de los botones) */}
-      {ticket.fechas && ticket.fechas.length > 0 ? (
-        <div className="ticket-fechas-compartido">
-          <div className="leyenda-compartido">compartido por última vez:</div>
-          <div className="fecha-compartido-simple" title="Ver todas las fechas de compartir">
-            {formatearFechaLegible(ticket.fechas[ticket.fechas.length - 1])}
-          </div>
-          <div className="fecha-compartido-detalle">
-            <div className="leyenda-detalle">Fechas en las que se compartió:</div>
-            {[...ticket.fechas].reverse().map((fecha, index) => (
-              <div key={index} className="fecha-item">
-                {formatearFechaLegible(fecha)}
-              </div>
-            ))}
-          </div>
+          {editandoDescripcion ? (
+            <div className="ticket-field ticket-descripcion-editable">
+              <input
+                className="input-descripcion"
+                autoFocus
+                value={valorDescripcion}
+                onChange={(e) => setValorDescripcion(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') guardarDescripcion();
+                  if (e.key === 'Escape') {
+                    setValorDescripcion(ticket.Descripcion || '');
+                    setEditandoDescripcion(false);
+                  }
+                }}
+                onBlur={guardarDescripcion}
+              />
+            </div>
+          ) : (
+            <div
+              className="ticket-field ticket-descripcion"
+              onClick={() => setEditandoDescripcion(true)}
+              style={{ cursor: 'pointer' }}
+              title="Haz clic para editar la descripción"
+            >
+              <span className="field-label">Descripción:</span>
+              {ticket.Descripcion || 'Sin descripción'}
+              <Edit size={12} className="icon-editar-desc" />
+            </div>
+          )}
         </div>
-      ) : null}
-
-      {/* Botones iconos a la derecha */}
-      <div className="ticket-acciones">
-        {/* Fila 1 */}
-        <div className="accion-fila">
-          <button
-            className="icon-btn btn-mensajes"
-            title="Ver mensajes"
-            onClick={() => manejarAccion('mensajes')}
-          >
-            <MessageSquare size={16} />
-          </button>
-          <button
-            className="icon-btn btn-copy-datos"
-            title="Copiar datos del ticket"
-            onClick={() => manejarAccion('copiar-datos')}
-          >
-            <FileText size={16} />
-          </button>
-        </div>
-
-        {/* Fila 2 */}
-        <div className="accion-fila">
-          <button
-            className={`icon-btn btn-atencion ${esResaltado ? 'activo' : ''}`}
-            title={esResaltado ? 'Quitar resaltado' : 'Resaltar ticket'}
-            onClick={() => manejarAccion('atencion')}
-          >
-            <AlertTriangle size={16} />
-          </button>
-          <button
-            className={`icon-btn btn-cerrar ${!archivoCerradosListo ? 'disabled' : ''}`}
-            title={!archivoCerradosListo ? 'Selecciona un archivo de cerrados primero' : 'Cerrar ticket'}
-            onClick={() => manejarAccion('cerrar')}
-            disabled={!archivoCerradosListo}
-          >
-            <X size={16} />
-          </button>
+        <div className="ticket-acciones">
+          <div className="accion-fila">
+            <button
+              className="icon-btn btn-mensajes"
+              title="Ver mensajes"
+              onClick={() => manejarAccion('mensajes')}
+            >
+              <MessageSquare size={16} />
+            </button>
+            <button
+              className="icon-btn btn-copy-datos"
+              title="Copiar datos del ticket"
+              onClick={() => manejarAccion('copiar-datos')}
+            >
+              <FileText size={16} />
+            </button>
+          </div>
+          <div className="accion-fila">
+            <button
+              className={`icon-btn btn-atencion ${esResaltado ? 'activo' : ''}`}
+              title={esResaltado ? 'Quitar resaltado' : 'Resaltar ticket'}
+              onClick={() => manejarAccion('atencion')}
+            >
+              <AlertTriangle size={16} />
+            </button>
+            <button
+              className={`icon-btn btn-cerrar ${!archivoCerradosListo ? 'disabled' : ''}`}
+              title={!archivoCerradosListo ? 'Selecciona un archivo de cerrados primero' : 'Cerrar ticket'}
+              onClick={() => manejarAccion('cerrar')}
+              disabled={!archivoCerradosListo}
+            >
+              <X size={16} />
+            </button>
+          </div>
         </div>
       </div>
-    </div>
     </div>
   );
 }

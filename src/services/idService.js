@@ -18,7 +18,7 @@ export function idYaExiste(id, tickets, idExcluir = null) {
     return false;
   }
 
-  return tickets.some((ticket) => ticket.id === id && ticket.id !== idExcluir);
+  return tickets.some((ticket) => ticket.Codigo === id && ticket.Codigo !== idExcluir);
 }
 
 /**

@@ -1,6 +1,5 @@
-/**
- * Utilidades de manejo de fechas y horas para fasTicket.
- */
+//===== Utilidades de manejo de fechas y horas para fasTicket ======
+
 
 /**
  * Devuelve la fecha y hora actual en formato ISO 8601.
@@ -10,6 +9,8 @@
 export function fechaHoraActualISO() {
   return new Date().toISOString();
 }
+
+
 
 /**
  * Formatea una fecha ISO en un string legible para mostrar en pantalla.
@@ -32,9 +33,11 @@ export function formatearFechaLegible(isoString) {
       minute: '2-digit',
     });
   } catch (error) {
-    return '';
+    return error;
   }
 }
+
+
 
 /**
  * Devuelve la etiqueta de la semana actual para usarla como nombre de archivo
@@ -77,3 +80,22 @@ export function obtenerEtiquetaSemanaActual() {
 
   return `tickets cerrados del ${formatear(lunes)} al ${formatear(viernes)}.txt`;
 }
+
+
+
+/**
+ * Parsea la fecha y hora de creación de un ticket a un timestamp comparable.
+ * Formato esperado: fecha "DD/MM/YYYY", hora "H:MM:SS p.m./a.m."
+ */
+export const parsearFechaParaComparar = (ticket) => {
+  const fecha = ticket["Fecha de creacion"] || "";
+  const hora = ticket["Hora de creacion"] || "";
+  if (!fecha || !hora) return 0;
+  const [dia, mes, anio] = fecha.split("/").map(Number);
+  const [hms, periodo] = hora.split(" ");
+  const [h, m, s] = hms.split(":").map(Number);
+  let hora24 = h;
+  if (periodo === "p.m." && h < 12) hora24 = h + 12;
+  if (periodo === "a.m." && h === 12) hora24 = 0;
+  return new Date(anio, mes - 1, dia, hora24, m, s).getTime();
+};

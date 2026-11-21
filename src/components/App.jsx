@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { Plus, Clipboard } from 'lucide-react';
 import { useTickets } from '../hooks/useTickets.js';
-import { formatearFechaLegible, obtenerEtiquetaSemanaActual } from '../utils/fechas.js';
+import { obtenerEtiquetaSemanaActual } from '../utils/fechas.js';
 import Buscador from './Buscador.jsx';
 import Seccion from './Seccion.jsx';
 
@@ -18,22 +18,17 @@ export default function App() {
     setBusqueda,
     archivoListo,
     error,
-    PRIORIDADES,
+    archivoCerradosListo,
     inicializarArchivo,
     obtenerTicketsPorSeccion,
     agregarTicket,
-    editarTicket,
-    eliminarTicket,
     cerrarTicket,
-    toggleAtendido,
     toggleAtencion,
-    agregarCompartido,
     cambiarPrioridad,
-    editarDescripcion,
     agregarComentario,
+    editarDescripcion,
     abrirArchivoCerrados,
     crearNuevoArchivoCerrados,
-    archivoCerradosListo,
     crearYCerrarTicket,
   } = useTickets();
 
@@ -76,30 +71,30 @@ export default function App() {
       setNotificacion({ tipo: 'exito', mensaje: 'Copiado al portapapeles' });
       setTimeout(() => setNotificacion(null), 2000);
     } catch (err) {
-      setNotificacion({ tipo: 'error', mensaje: 'No se pudo copiar' });
+      setNotificacion({ tipo: 'error', mensaje: `No se pudo copiar: ${err}` });
       setTimeout(() => setNotificacion(null), 2000);
     }
   };
 
   // Manejar acciones de las tarjetas de ticket
-  const manejarAccionTicket = async (tipo, id) => {
+  const manejarAccionTicket = async (tipo, codigo) => {
     switch (tipo) {
       case 'copiar-datos': {
-        const t = tickets.find((x) => x.id === id);
+        const t = tickets.find((x) => x.Codigo === codigo);
         if (t) {
-          const datos = `${t.url || ''}\n${t.titulo}\n${t.id}`;
+          const datos = `${t.Codigo}\n${t.Asunto}\n${t.Tipo}`;
           await copiarPortapapeles(datos);
         }
         break;
       }
       case 'cerrar':
-        await cerrarTicket(id);
+        await cerrarTicket(codigo);
         break;
       case 'atencion':
-        await toggleAtencion(id);
+        await toggleAtencion(codigo);
         break;
       case 'mensajes': {
-        const t = tickets.find((x) => x.id === id);
+        const t = tickets.find((x) => x.Codigo === codigo);
         if (t) {
           setTicketMensajesAbierto(t);
           setModalMensajesAbierto(true);
@@ -115,43 +110,45 @@ export default function App() {
   const manejarGuardarTicket = async (e) => {
     e.preventDefault();
 
-    // Procesar las 3 líneas: URL, título, ID
+    // Procesar las líneas: Código, Asunto, Tipo, Asignado A, Descripción
     const lineas = textoLineas.split('\n').map((l) => l.trim()).filter((l) => l !== '');
 
-    if (lineas.length < 3) {
-      setNotificacion({ tipo: 'error', mensaje: 'Debes ingresar URL, título y ID (una por línea)' });
+    if (lineas.length < 4) {
+      setNotificacion({ tipo: 'error', mensaje: 'Debes ingresar Código, Asunto, Tipo y Asignado A (una por línea)' });
       setTimeout(() => setNotificacion(null), 3000);
       return;
     }
 
-    const url = lineas[0];
-    const titulo = lineas[1];
-    const id = lineas[2];
+    const codigo = lineas[0];
+    const asunto = lineas[1];
+    const tipo = lineas[2];
+    const asignadoA = lineas[3];
+    const descripcion = lineas.length > 4 ? lineas[4] : '';
 
-    if (!url || !titulo || !id) {
-      setNotificacion({ tipo: 'error', mensaje: 'URL, título e ID son obligatorios' });
+    if (!codigo || !asunto || !tipo || !asignadoA) {
+      setNotificacion({ tipo: 'error', mensaje: 'Código, Asunto, Tipo y Asignado A son obligatorios' });
       setTimeout(() => setNotificacion(null), 3000);
       return;
     }
 
     const nuevoTicket = {
-      id,
-      titulo,
-      descripcion: '',
-      url,
-      prioridad: 'Baja',
-      tipo: formTipo,
-      comentarios: [],
-      fechas: [],
-      compartir: false,
-      seccionId: formSeccionId,
-      orden: 0,
+      Codigo: codigo,
+      Asunto: asunto,
+      Descripcion: descripcion,
+      Tipo: tipo,
+      Prioridad: 'baja',
+      Estado: 'Pendiente',
+      'Fecha de creacion': '',
+      'Hora de creacion': '',
+      'Asignado A': asignadoA,
+      Comentarios: [],
+      Resaltado: false,
     };
 
     const resultado = await agregarTicket(nuevoTicket);
 
     if (!resultado) {
-      // Ticket duplicado no atendido (error ya establecido en el hook)
+      // Ticket duplicado (error ya establecido en el hook)
       if (error) {
         setNotificacion({ tipo: 'error', mensaje: error });
         setTimeout(() => setNotificacion(null), 3000);
@@ -159,14 +156,8 @@ export default function App() {
       return;
     }
 
-    // Si el ticket ya existía y estaba atendido, se reactivó (resultado.atendido === true indica que era atendido antes de reactivar)
-    if (resultado.atendido === true) {
-      setNotificacion({ tipo: 'exito', mensaje: 'Ticket reactivado: ya no está marcado como atendido' });
-      setTimeout(() => setNotificacion(null), 3000);
-    } else {
-      setNotificacion({ tipo: 'exito', mensaje: 'Ticket creado exitosamente' });
-      setTimeout(() => setNotificacion(null), 3000);
-    }
+    setNotificacion({ tipo: 'exito', mensaje: 'Ticket creado exitosamente' });
+    setTimeout(() => setNotificacion(null), 3000);
 
     setTextoLineas('');
     setFormSeccionId(secciones.length > 0 ? secciones[0].id : '');
@@ -178,37 +169,39 @@ export default function App() {
   const manejarCrearYCerrarTicket = async (e) => {
     e.preventDefault();
 
-    // Procesar las 3 líneas: URL, título, ID
+    // Procesar las líneas: Código, Asunto, Tipo, Asignado A, Descripción
     const lineas = textoLineas.split('\n').map((l) => l.trim()).filter((l) => l !== '');
 
-    if (lineas.length < 3) {
-      setNotificacion({ tipo: 'error', mensaje: 'Debes ingresar URL, título y ID (una por línea)' });
+    if (lineas.length < 4) {
+      setNotificacion({ tipo: 'error', mensaje: 'Debes ingresar Código, Asunto, Tipo y Asignado A (una por línea)' });
       setTimeout(() => setNotificacion(null), 3000);
       return;
     }
 
-    const url = lineas[0];
-    const titulo = lineas[1];
-    const id = lineas[2];
+    const codigo = lineas[0];
+    const asunto = lineas[1];
+    const tipo = lineas[2];
+    const asignadoA = lineas[3];
+    const descripcion = lineas.length > 4 ? lineas[4] : '';
 
-    if (!url || !titulo || !id) {
-      setNotificacion({ tipo: 'error', mensaje: 'URL, título e ID son obligatorios' });
+    if (!codigo || !asunto || !tipo || !asignadoA) {
+      setNotificacion({ tipo: 'error', mensaje: 'Código, Asunto, Tipo y Asignado A son obligatorios' });
       setTimeout(() => setNotificacion(null), 3000);
       return;
     }
 
     const nuevoTicket = {
-      id,
-      titulo,
-      descripcion: '',
-      url,
-      prioridad: 'Baja',
-      tipo: formTipo,
-      comentarios: [],
-      fechas: [],
-      compartir: false,
-      seccionId: formSeccionId,
-      orden: 0,
+      Codigo: codigo,
+      Asunto: asunto,
+      Descripcion: descripcion,
+      Tipo: tipo,
+      Prioridad: 'baja',
+      Estado: 'Pendiente',
+      'Fecha de creacion': '',
+      'Hora de creacion': '',
+      'Asignado A': asignadoA,
+      Comentarios: [],
+      Resaltado: false,
     };
 
     const ok = await crearYCerrarTicket(nuevoTicket);
@@ -236,16 +229,14 @@ export default function App() {
     if (!nuevoComentario.trim()) return;
     if (!ticketMensajesAbierto) return;
 
-    const fechaActual = new Date().toISOString();
-    const fechaFormateada = formatearFechaLegible(fechaActual);
-    const comentarioConFecha = `${nuevoComentario.trim()} - ${fechaFormateada}`;
+    const comentarioConFecha = nuevoComentario.trim();
 
-    const ok = await agregarComentario(ticketMensajesAbierto.id, comentarioConFecha);
+    const ok = await agregarComentario(ticketMensajesAbierto.Codigo, comentarioConFecha);
     if (ok) {
       // Actualizar inmediatamente en el modal para mostrar sin cerrar y volver a abrir
       setTicketMensajesAbierto(prev => ({
         ...prev,
-        comentarios: [...(prev.comentarios || []), comentarioConFecha]
+        Comentarios: [...(prev.Comentarios || []), comentarioConFecha]
       }));
       setNuevoComentario('');
       setNotificacion({ tipo: 'exito', mensaje: 'Comentario agregado' });
@@ -373,11 +364,11 @@ export default function App() {
                   className="textarea-datos-ticket"
                   value={textoLineas}
                   onChange={(e) => setTextoLineas(e.target.value)}
-                  placeholder="URL del ticket\nTítulo del ticket\nID del ticket"
-                  rows="4"
+                  placeholder="Código del ticket\nAsunto del ticket\nTipo de ticket\nAsignado A\nDescripción (opcional)"
+                  rows="5"
                 />
                 <span className="campo-ayuda">
-                  Línea 1: URL | Línea 2: Título | Línea 3: ID
+                  Línea 1: Código | Línea 2: Asunto | Línea 3: Tipo | Línea 4: Asignado A | Línea 5: Descripción (opcional)
                 </span>
               </div>
 
@@ -441,16 +432,16 @@ export default function App() {
         <div className="modal-overlay" onClick={() => setModalMensajesAbierto(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div style={{ marginBottom: 16 }}>
-              <h3>Mensajes - Ticket #{ticketMensajesAbierto.id}</h3>
+              <h3>Mensajes - Ticket #{ticketMensajesAbierto.Codigo}</h3>
             </div>
 
             <div className="mensajes-lista">
-              {(ticketMensajesAbierto.comentarios || []).map((comentario, index) => (
+              {(ticketMensajesAbierto.Comentarios || []).map((comentario, index) => (
                 <div key={index} className="mensaje-item">
                   <div className="mensaje-texto">{comentario}</div>
                 </div>
               ))}
-              {ticketMensajesAbierto.comentarios && ticketMensajesAbierto.comentarios.length === 0 && (
+              {ticketMensajesAbierto.Comentarios && ticketMensajesAbierto.Comentarios.length === 0 && (
                 <div className="mensaje-vacio">No hay comentarios aún.</div>
               )}
             </div>
@@ -499,13 +490,6 @@ export default function App() {
                   tickets={ticketsSeccion}
                   expandida={expandida}
                   onToggle={() => toggleSeccionExpandida(seccion.id)}
-                  onEditarTitulo={(id, nuevoTitulo) => {
-                    setSecciones((prev) =>
-                      prev.map((s) =>
-                        s.id === id ? { ...s, titulo: nuevoTitulo } : s
-                      )
-                    );
-                  }}
                   onAccionTicket={manejarAccionTicket}
                   onEditarDescripcion={editarDescripcion}
                   onCambiarPrioridad={cambiarPrioridad}

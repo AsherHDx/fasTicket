@@ -496,12 +496,6 @@ body {
   border-color: #ca8a04;
 }
 
-/* Atendido - opacidad reducida */
-.ticket-card-content.atendido {
-  opacity: 0.6;
-  filter: grayscale(0.4);
-}
-
 .ticket-info {
   flex: 1;
   min-width: 0;
@@ -852,86 +846,13 @@ body {
   font-weight: 600;
 }
 
-/* ===== Fechas de compartir ===== */
-.ticket-fechas-compartido {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 8px;
-  cursor: pointer;
-  min-width: 90px;
-  position: relative;
-  height: 100%;
-  justify-content: center;
-}
-
-.leyenda-compartido {
-  font-size: 10px;
-  color: var(--texto-secundario);
-  margin-bottom: 2px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.fecha-compartido-simple {
-  font-size: 14px;
-  font-weight: 600;
-  color: #3b82f6;
-  background-color: rgba(59, 130, 246, 0.1);
-  padding: 4px 8px;
-  border-radius: 4px;
-  border: 1px solid rgba(59, 130, 246, 0.2);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.fecha-compartido-simple:hover {
-  background-color: rgba(59, 130, 246, 0.2);
-  border-color: #3b82f6;
-}
-
-.fecha-compartido-detalle {
-  position: absolute;
-  background-color: var(--fondo-tarjeta);
-  border: 1px solid var(--borde);
-  border-radius: 6px;
-  padding: 8px;
-  margin-top: 4px;
-  min-width: 120px;
-  z-index: 10;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
-}
-
-.leyenda-detalle {
-  font-size: 10px;
-  color: var(--texto-secundario);
-  margin-bottom: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.fecha-item {
+.comentario-item {
   font-size: 13px;
   color: var(--texto-secundario);
   margin-bottom: 2px;
   padding: 2px 4px;
   border-radius: 3px;
-}
-
-.fecha-item:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-}
-
-/* Mostrar detalle al hacer hover en el contenedor */
-.ticket-fechas-compartido:hover .fecha-compartido-detalle {
-  display: block;
-}
-
-/* Ocultar detalle por defecto */
-.ticket-fechas-compartido:not(:hover) .fecha-compartido-detalle {
-  display: none;
+  background-color: rgba(255, 255, 255, 0.03);
 }
 
 /* ===== Modal de mensajes ===== */
