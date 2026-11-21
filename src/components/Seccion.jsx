@@ -23,7 +23,7 @@ export default function Seccion({
         <div className="seccion-titulo-container">
 
           <div className="seccion-titulo-texto">
-            {seccion.titulo}
+            {seccion.id}
           </div>
 
         </div>

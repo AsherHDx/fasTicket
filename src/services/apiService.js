@@ -7,16 +7,23 @@
 
 /**
  * URL base de la API de tickets.
- * Ajustar según el endpoint real del sistema.
  */
-const API_URL = 'https://api.ejemplo.com/tickets';
+const PARAMS = new URLSearchParams({
+  groupId:"1789411244979-m7e87glkv"
+});
+const API_URL = `http://10.23.105.36:4001/api/export/tickets?${PARAMS}`;
+const API_KEY = import.meta.env.VITE_API_KEY;
 
 /**
  * Consulta la API y devuelve el arreglo de tickets recibido.
  * @returns {Promise<Array<Object>>} Arreglo de tickets de la API.
  */
 export async function consultarAPI() {
-  const response = await fetch(API_URL);
+  const response = await fetch(API_URL, {
+    headers:{
+      "X-API-Key": API_KEY
+    }
+  });
   if (!response.ok) {
     throw new Error(`Error al consultar la API: ${response.statusText}`);
   }

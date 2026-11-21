@@ -69,7 +69,7 @@ export default function App() {
       case 'copiar-datos': {
         const ticket = tickets.find((t) => t.Codigo === codigo);
         if (ticket) {
-          const datos = `ASUNTO: ${ticket.Asunto}\nCÓDIGO: ${ticket.Codigo}\nTIPO: ${ticket.Tipo}`;
+          const datos = `http://10.23.105.36:5174/tickets/${ticket.Codigo}\n${ticket.Asunto}\n${ticket.Codigo}`;
           await copiarPortapapeles(datos, setToast);
         }
         break;
@@ -231,7 +231,7 @@ export default function App() {
               checked={seccionVisible === seccion.id}
               onChange={() => toggleSeccionVisible(seccion.id)}
             />
-            {seccion.titulo}
+            {seccion.id}
           </label>
         ))}
       </div>

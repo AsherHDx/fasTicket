@@ -23,12 +23,17 @@ import { consultarAPI, ticketsTienenCambios } from '../services/apiService.js';
 
 // Secciones predefinidas
 const SECCIONES_PREDEFINIDAS = [
-  { id: 'isma' },
-  { id: 'mario' },
-  { id: 'david' },
-  { id: 'richard' },
-  { id: 'lalo' },
-  { id: 'otro' },
+  { id: 'David Santos' },
+  { id: 'Ricardo Alcantara' },
+  { id: 'Ismael Morato' },
+  { id: 'Mario Garcia' },
+  { id: 'Amin Torices' },
+  { id: 'Alejandro Velez' },
+  { id: 'Eduardo Esteban' },
+  { id: 'Gustavo Fuentes' },
+  { id: 'Nallely Chavez' },
+  { id: 'Ernesto Ramírez' },
+  { id: 'Otro' },
 ];
 
 export function useTickets() {
@@ -51,7 +56,7 @@ export function useTickets() {
    */
   const obtenerSeccionValida = useCallback((asignadoA) => {
     const idsValidos = SECCIONES_PREDEFINIDAS.map((seccion) => seccion.id);
-    return idsValidos.includes(asignadoA) ? asignadoA : 'otro';
+    return idsValidos.includes(asignadoA) ? asignadoA : 'Otro';
   }, []);
 
   /**
