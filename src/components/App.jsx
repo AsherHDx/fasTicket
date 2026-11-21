@@ -1,10 +1,14 @@
 /**
  * Componente principal App de fasTicket.
- * Vista principal: tema oscuro, buscador, botón agregar ticket, checkboxes de visibilidad,
+ * Vista principal: tema oscuro, buscador, checkboxes de visibilidad,
  * secciones desplegables y tarjetas de tickets.
+ *
+ * Los tickets ya no se crean ni cierran manualmente desde la UI.
+ * Se sincronizan automáticamente con la API cada minuto cuando ambos
+ * archivos (fuente y cerrados) están seleccionados.
  */
 import { useState } from 'react';
-import { Plus, Clipboard } from 'lucide-react';
+import { Clipboard } from 'lucide-react';
 import { useTickets } from '../hooks/useTickets.js';
 import { obtenerEtiquetaSemanaActual } from '../utils/fechas.js';
 import { copiarPortapapeles } from '../utils/varios.js';
@@ -19,33 +23,21 @@ export default function App() {
     setBusqueda,
     archivoListo,
     error,
-    archivoCerradosListo,
+    sincronizando,
+    ultimoSincronizado,
+    puedeSincronizar,
     inicializarArchivo,
     obtenerTicketsPorSeccion,
-    agregarTicket,
-    cerrarTicket,
+    sincronizarConAPI,
     toggleAtencion,
     cambiarPrioridad,
     agregarComentario,
     editarDescripcion,
     abrirArchivoCerrados,
     crearNuevoArchivoCerrados,
-    crearYCerrarTicket,
+    archivoCerradosListo,
   } = useTickets();
 
-
-  // Tipos de ticket disponibles
-  const TIPOS_TICKET = [
-    'incidencia',
-    'solicitud',
-    'consulta',
-    'seguridad',
-    'configuración',
-    'proyectos',
-    'infraestructura',
-  ];
-
-  const [modalAbierto, setModalAbierto] = useState(false);
   const [toast, setToast] = useState(null);
 
   // Qué secciones están expandidas (todas por defecto)
@@ -61,41 +53,34 @@ export default function App() {
   const [ticketMensajesAbierto, setTicketMensajesAbierto] = useState(null);
   const [nuevoComentario, setNuevoComentario] = useState('');
 
-  // Formulario de crear ticket (modal)
-  const [textoLineas, setTextoLineas] = useState('');
-  const [formSeccionId, setFormSeccionId] = useState(secciones.length > 0 ? secciones[0].id : '');
-  const [formTipo, setFormTipo] = useState(TIPOS_TICKET[0]);
-
-  
-
   /**
    * Función que maneja los botones de la tarjeta del ticket
-   * @param {string} tipo tipo de botón (copiar-datos, cerrar, ...) que vienen definidos en TicketCard.jsx
-   * @param {string} codigo id del ticket (ej, #VD-OPS-000567)
+   * @param {string} tipo tipo de botón (copiar-datos, atencion, mensajes)
+   * @param {string} código código del ticket (ej, #VD-OPS-000567)
    */
   const manejarAccionTicket = async (tipo, codigo) => {
     switch (tipo) {
       /*
       Copia los datos del ticket en el porta papeles con el formato:
-      URL
       ASUNTO
-      CODIGO
+      CÓDIGO
+      TIPO
       */
       case 'copiar-datos': {
         const ticket = tickets.find((t) => t.Codigo === codigo);
         if (ticket) {
-          const datos = `URL\n${ticket.Asunto}\n${ticket.Codigo}`;
+          const datos = `ASUNTO: ${ticket.Asunto}\nCÓDIGO: ${ticket.Codigo}\nTIPO: ${ticket.Tipo}`;
           await copiarPortapapeles(datos, setToast);
         }
         break;
       }
 
-      //Resalta el ticket en naranja
+      // Resalta el ticket en naranja
       case 'atencion':
         await toggleAtencion(codigo);
         break;
 
-      //Abre modal de mensajes del ticket
+      // Abre modal de mensajes del ticket
       case 'mensajes': {
         const t = tickets.find((x) => x.Codigo === codigo);
         if (t) {
@@ -110,123 +95,6 @@ export default function App() {
     }
   };
 
-  // Guardar nuevo ticket desde el modal
-  const manejarGuardarTicket = async (e) => {
-    e.preventDefault();
-
-    // Procesar las líneas: Código, Asunto, Tipo, Asignado A, Descripción
-    const lineas = textoLineas.split('\n').map((l) => l.trim()).filter((l) => l !== '');
-
-    if (lineas.length < 4) {
-      setToast({ tipo: 'error', mensaje: 'Debes ingresar Código, Asunto, Tipo y Asignado A (una por línea)' });
-      setTimeout(() => setToast(null), 3000);
-      return;
-    }
-
-    const codigo = lineas[0];
-    const asunto = lineas[1];
-    const tipo = lineas[2];
-    const asignadoA = lineas[3];
-    const descripcion = lineas.length > 4 ? lineas[4] : '';
-
-    if (!codigo || !asunto || !tipo || !asignadoA) {
-      setToast({ tipo: 'error', mensaje: 'Código, Asunto, Tipo y Asignado A son obligatorios' });
-      setTimeout(() => setToast(null), 3000);
-      return;
-    }
-
-    const nuevoTicket = {
-      Codigo: codigo,
-      Asunto: asunto,
-      Descripcion: descripcion,
-      Tipo: tipo,
-      Prioridad: 'baja',
-      Estado: 'Pendiente',
-      'Fecha de creacion': '',
-      'Hora de creacion': '',
-      'Asignado A': asignadoA,
-      Comentarios: [],
-      Resaltado: false,
-    };
-
-    const resultado = await agregarTicket(nuevoTicket);
-
-    if (!resultado) {
-      // Ticket duplicado (error ya establecido en el hook)
-      if (error) {
-        setToast({ tipo: 'error', mensaje: error });
-        setTimeout(() => setToast(null), 3000);
-      }
-      return;
-    }
-
-    setToast({ tipo: 'exito', mensaje: 'Ticket creado exitosamente' });
-    setTimeout(() => setToast(null), 3000);
-
-    setTextoLineas('');
-    setFormSeccionId(secciones.length > 0 ? secciones[0].id : '');
-    setFormTipo(TIPOS_TICKET[0]);
-    setModalAbierto(false);
-  };
-
-  // Crear ticket y cerrarlo inmediatamente
-  const manejarCrearYCerrarTicket = async (e) => {
-    e.preventDefault();
-
-    // Procesar las líneas: Código, Asunto, Tipo, Asignado A, Descripción
-    const lineas = textoLineas.split('\n').map((l) => l.trim()).filter((l) => l !== '');
-
-    if (lineas.length < 4) {
-      setToast({ tipo: 'error', mensaje: 'Debes ingresar Código, Asunto, Tipo y Asignado A (una por línea)' });
-      setTimeout(() => setToast(null), 3000);
-      return;
-    }
-
-    const codigo = lineas[0];
-    const asunto = lineas[1];
-    const tipo = lineas[2];
-    const asignadoA = lineas[3];
-    const descripcion = lineas.length > 4 ? lineas[4] : '';
-
-    if (!codigo || !asunto || !tipo || !asignadoA) {
-      setToast({ tipo: 'error', mensaje: 'Código, Asunto, Tipo y Asignado A son obligatorios' });
-      setTimeout(() => setToast(null), 3000);
-      return;
-    }
-
-    const nuevoTicket = {
-      Codigo: codigo,
-      Asunto: asunto,
-      Descripcion: descripcion,
-      Tipo: tipo,
-      Prioridad: 'baja',
-      Estado: 'Pendiente',
-      'Fecha de creacion': '',
-      'Hora de creacion': '',
-      'Asignado A': asignadoA,
-      Comentarios: [],
-      Resaltado: false,
-    };
-
-    const ok = await crearYCerrarTicket(nuevoTicket);
-
-    if (!ok) {
-      if (error) {
-        setToast({ tipo: 'error', mensaje: error });
-        setTimeout(() => setToast(null), 3000);
-      }
-      return;
-    }
-
-    setToast({ tipo: 'exito', mensaje: 'Ticket creado y cerrado exitosamente' });
-    setTimeout(() => setToast(null), 3000);
-
-    setTextoLineas('');
-    setFormSeccionId(secciones.length > 0 ? secciones[0].id : '');
-    setFormTipo(TIPOS_TICKET[0]);
-    setModalAbierto(false);
-  };
-
   // Guardar nuevo comentario en un ticket
   const manejarGuardarComentario = async (e) => {
     e.preventDefault();
@@ -238,9 +106,9 @@ export default function App() {
     const ok = await agregarComentario(ticketMensajesAbierto.Codigo, comentarioConFecha);
     if (ok) {
       // Actualizar inmediatamente en el modal para mostrar sin cerrar y volver a abrir
-      setTicketMensajesAbierto(prev => ({
+      setTicketMensajesAbierto((prev) => ({
         ...prev,
-        Comentarios: [...(prev.Comentarios || []), comentarioConFecha]
+        Comentarios: [...(prev.Comentarios || []), comentarioConFecha],
       }));
       setNuevoComentario('');
       setToast({ tipo: 'exito', mensaje: 'Comentario agregado' });
@@ -317,15 +185,27 @@ export default function App() {
               ⚠️ Sin archivo cargado
             </span>
           )}
-          <button
-            className={`btn-agregar-verde ${!archivoListo ? 'disabled' : ''}`}
-            onClick={() => setModalAbierto(true)}
-            disabled={!archivoListo}
-            style={{ marginLeft: 'auto' }}
-          >
-            <Plus size={18} />
-            Agregar ticket
-          </button>
+          {puedeSincronizar && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginRight: 10 }}>
+              <span
+                className="estado-sincronizacion"
+                style={{
+                  color: sincronizando ? '#3b82f6' : '#22c55e',
+                  fontSize: 13,
+                }}
+              >
+                {sincronizando ? '⟳ Sincronizando...' : 'Sincronización automática activa'}
+              </span>
+              {ultimoSincronizado && (
+                <span style={{ fontSize: 12, color: '#94a3b8' }}>
+                  Última sync: {new Date(ultimoSincronizado).toLocaleTimeString('es-MX', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </header>
 
@@ -356,81 +236,6 @@ export default function App() {
         ))}
       </div>
 
-      {/* Modal de crear ticket */}
-      {modalAbierto && (
-        <div className="modal-overlay" onClick={() => setModalAbierto(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Nuevo ticket</h3>
-            <form onSubmit={manejarGuardarTicket}>
-              <div className="form-grupo">
-                <label>Datos del ticket (una por línea) *</label>
-                <textarea
-                  className="textarea-datos-ticket"
-                  value={textoLineas}
-                  onChange={(e) => setTextoLineas(e.target.value)}
-                  placeholder="Código del ticket\nAsunto del ticket\nTipo de ticket\nAsignado A\nDescripción (opcional)"
-                  rows="5"
-                />
-                <span className="campo-ayuda">
-                  Línea 1: Código | Línea 2: Asunto | Línea 3: Tipo | Línea 4: Asignado A | Línea 5: Descripción (opcional)
-                </span>
-              </div>
-
-              <div className="form-grupo">
-                <label>Sección *</label>
-                <div className="radio-group">
-                  {secciones.map((s) => (
-                    <label key={s.id} className="radio-label">
-                      <input
-                        type="radio"
-                        name="form-seccion"
-                        value={s.id}
-                        checked={formSeccionId === s.id}
-                        onChange={() => setFormSeccionId(s.id)}
-                      />
-                      {s.titulo}
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="form-grupo">
-                <label>Tipo de ticket *</label>
-                <div className="radio-group">
-                  {TIPOS_TICKET.map((t) => (
-                    <label key={t} className="radio-label">
-                      <input
-                        type="radio"
-                        name="form-tipo"
-                        value={t}
-                        checked={formTipo === t}
-                        onChange={() => setFormTipo(t)}
-                      />
-                      {t}
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="form-botones">
-                <button
-                  type="button"
-                  className={`btn-cerrar-creado ${!archivoCerradosListo ? 'disabled' : ''}`}
-                  onClick={manejarCrearYCerrarTicket}
-                  disabled={!archivoCerradosListo}
-                  title={!archivoCerradosListo ? 'Primero selecciona o crea un archivo de tickets cerrados' : 'Crear y cerrar'}
-                >
-                  Crear y cerrar
-                </button>
-                <button type="submit" className="btn-guardar-verde">
-                  Crear ticket
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
       {/* Modal de mensajes (comentarios) */}
       {modalMensajesAbierto && ticketMensajesAbierto && (
         <div className="modal-overlay" onClick={() => setModalMensajesAbierto(false)}>
@@ -445,9 +250,10 @@ export default function App() {
                   <div className="mensaje-texto">{comentario}</div>
                 </div>
               ))}
-              {ticketMensajesAbierto.Comentarios && ticketMensajesAbierto.Comentarios.length === 0 && (
-                <div className="mensaje-vacio">No hay comentarios aún.</div>
-              )}
+              {ticketMensajesAbierto.Comentarios &&
+                ticketMensajesAbierto.Comentarios.length === 0 && (
+                  <div className="mensaje-vacio">No hay comentarios aún.</div>
+                )}
             </div>
 
             <div className="mensaje-formulario">
@@ -476,7 +282,6 @@ export default function App() {
         {secciones.length === 0 ? (
           <div className="estado-vacio">
             <p>No hay secciones creadas aún.</p>
-            <button onClick={() => setModalAbierto(true)}>Crear primer ticket</button>
           </div>
         ) : (
           secciones
@@ -494,6 +299,13 @@ export default function App() {
                   tickets={ticketsSeccion}
                   expandida={expandida}
                   onToggle={() => toggleSeccionExpandida(seccion.id)}
+                  onEditarTitulo={(id, nuevoTitulo) => {
+                    setSecciones((prev) =>
+                      prev.map((s) =>
+                        s.id === id ? { ...s, titulo: nuevoTitulo } : s
+                      )
+                    );
+                  }}
                   onAccionTicket={manejarAccionTicket}
                   onEditarDescripcion={editarDescripcion}
                   onCambiarPrioridad={cambiarPrioridad}

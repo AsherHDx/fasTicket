@@ -1,8 +1,12 @@
 /**
  * Hook personalizado para manejar la lógica de tickets y secciones de fasTicket.
- * Incluye CRUD, búsqueda y persistencia automática.
+ * Incluye búsqueda, persistencia automática y sincronización con la API externa.
+ *
+ * Los tickets ya no se crean ni cierran manualmente desde la UI.
+ * La sincronización con la API se ejecuta automáticamente cada minuto
+ * solo cuando ambos archivos (fuente y cerrados) están seleccionados.
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   seleccionarArchivoTickets,
   obtenerHandleTickets,
@@ -13,21 +17,19 @@ import {
   obtenerHandleCerrados,
   agregarTicketCerrado,
 } from '../services/fileService.js';
-import { crearTicket, PRIORIDADES } from '../types/index.js';
-import { validarTicketCompleto } from '../utils/validaciones.js';
+import { PRIORIDADES } from '../types/index.js';
 import { parsearFechaParaComparar } from '../utils/fechas.js';
+import { consultarAPI, ticketsTienenCambios } from '../services/apiService.js';
 
 // Secciones predefinidas
 const SECCIONES_PREDEFINIDAS = [
-  { id: 'isma'},
-  { id: 'mario'},
-  { id: 'david'},
-  { id: 'richard'},
-  { id: 'lalo'},
-  { id: 'otro'},
+  { id: 'isma' },
+  { id: 'mario' },
+  { id: 'david' },
+  { id: 'richard' },
+  { id: 'lalo' },
+  { id: 'otro' },
 ];
-
-
 
 export function useTickets() {
   const [secciones, setSecciones] = useState(SECCIONES_PREDEFINIDAS);
@@ -37,8 +39,10 @@ export function useTickets() {
   const [archivoListo, setArchivoListo] = useState(false);
   const [archivoCerradosListo, setArchivoCerradosListo] = useState(false);
   const [error, setError] = useState(null);
+  const [sincronizando, setSincronizando] = useState(false);
+  const [ultimoSincronizado, setUltimoSincronizado] = useState(null);
 
-
+  const intervaloRef = useRef(null);
 
   /**
    * Obtiene el ID de sección válido para un ticket.
@@ -50,18 +54,16 @@ export function useTickets() {
     return idsValidos.includes(asignadoA) ? asignadoA : 'otro';
   }, []);
 
-
-
   /**
    * Selecciona el archivo tickets.txt y carga su contenido.
    */
   const inicializarArchivo = useCallback(async () => {
     try {
       await seleccionarArchivoTickets();
-      const tickets = await leerTickets(obtenerHandleTickets());
+      const datos = await leerTickets(obtenerHandleTickets());
 
       // Normalizar cada ticket: asegurar Asignado A válido
-      const ticketsNormalizados = tickets.map((ticket) => ({
+      const ticketsNormalizados = datos.map((ticket) => ({
         ...ticket,
         'Asignado A': obtenerSeccionValida(ticket['Asignado A']),
       }));
@@ -69,14 +71,11 @@ export function useTickets() {
       setTickets(ticketsNormalizados);
       setArchivoListo(true);
       setError(null);
-
     } catch (err) {
       setError(err.message);
       setArchivoListo(false);
     }
   }, [obtenerSeccionValida]);
-
-
 
   /**
    * Guarda todos los tickets en el archivo automáticamente.
@@ -86,19 +85,15 @@ export function useTickets() {
       setError('No hay archivo de tickets seleccionado.');
       return false;
     }
-
     try {
       await guardarTickets(obtenerHandleTickets(), listaTickets);
       setError(null);
       return true;
-
     } catch (err) {
       setError(err.message);
       return false;
     }
   }, []);
-
-
 
   /**
    * Agrupa tickets por sección aplicando filtro de búsqueda.
@@ -122,107 +117,153 @@ export function useTickets() {
     return filtrados.sort((ticketA, ticketB) => parsearFechaParaComparar(ticketB) - parsearFechaParaComparar(ticketA));
   }, [tickets, busqueda]);
 
-
-
   /**
-   * Crea un ticket y lo persiste. (SE ELIMINARÁ MÁS ADELANTE)
+   * Sincroniza los tickets de la API con el archivo fuente local.
+   * Reglas:
+   *  - Si en la API viene un ticket que no existe en el archivo fuente → agregarlo.
+   *  - Si en la API viene un ticket que ya existe y tiene cambios → actualizarlo.
+   *  - Si en la API viene un ticket igual al del archivo fuente → no hacer nada.
+   *  - Los tickets de la API con Estado === "terminado" no se muestran en la UI.
+   *  - Los tickets locales activos que en la API pasaron a "terminado" se cierran
+   *    automáticamente (se agregan al archivo de cerrados y se quitan del fuente).
    */
-  const agregarTicket = useCallback(
-    async (datosNuevoTicket) => {
-      const asignadoAValido = obtenerSeccionValida(datosNuevoTicket['Asignado A']);
-      const existeTicket = tickets.find((ticket) => ticket.Codigo === datosNuevoTicket.Codigo);
+  const sincronizarConAPI = useCallback(async () => {
+    if (!obtenerHandleTickets() || !obtenerHandleCerrados()) {
+      setError('No se pueden sincronizar: selecciona ambos archivos (fuente y cerrados) primero.');
+      return;
+    }
 
-      if (existeTicket) {
-        setError(
-          `Este ticket ya existe (Código: ${datosNuevoTicket.Codigo}). No se pueden crear tickets duplicados.`
-        );
-        return null;
+    setSincronizando(true);
+    setError(null);
+
+    try {
+      const ticketsAPI = await consultarAPI();
+
+      // Filtrar tickets terminados de la API (no se visualizan en la UI)
+      const ticketsActivosAPI = ticketsAPI.filter((t) => t.Estado !== 'terminado');
+
+      // Trabajar sobre una copia de los tickets actuales
+      let actualizados = [...tickets];
+      let cambios = false;
+
+      // 1. Procesar tickets activos de la API
+      for (const ticketAPI of ticketsActivosAPI) {
+        const existe = actualizados.find((t) => t.Codigo === ticketAPI.Codigo);
+
+        if (!existe) {
+          // Ticket nuevo de la API: agregarlo al archivo fuente
+          const nuevo = {
+            Codigo: ticketAPI.Codigo,
+            Asunto: ticketAPI.Asunto,
+            Tipo: ticketAPI.Tipo,
+            Prioridad: ticketAPI.Prioridad || 'baja',
+            Estado: ticketAPI.Estado,
+            'Fecha de creacion': ticketAPI['Fecha de creacion'],
+            'Hora de creacion': ticketAPI['Hora de creacion'],
+            'Asignado A': ticketAPI['Asignado A'],
+            Descripcion: '',
+            Comentarios: [],
+            Resaltado: false,
+          };
+          actualizados.push(nuevo);
+          cambios = true;
+        } else if (ticketsTienenCambios(existe, ticketAPI)) {
+          // Ticket existente con cambios: actualizar campos de la API,
+          // preservar campos de interfaz (Descripcion, Comentarios, Resaltado)
+          const actualizado = {
+            ...existe,
+            Asunto: ticketAPI.Asunto,
+            Tipo: ticketAPI.Tipo,
+            Prioridad: ticketAPI.Prioridad || existe.Prioridad,
+            Estado: ticketAPI.Estado,
+            'Fecha de creacion': ticketAPI['Fecha de creacion'],
+            'Hora de creacion': ticketAPI['Hora de creacion'],
+            'Asignado A': ticketAPI['Asignado A'],
+          };
+          actualizados = actualizados.map((t) =>
+            t.Codigo === ticketAPI.Codigo ? actualizado : t
+          );
+          cambios = true;
+        }
+        // Si es igual, no hacer nada
       }
 
-      const nuevoTicket = crearTicket({
-        ...datosNuevoTicket,
-        'Asignado A': asignadoAValido,
-      });
-
-      const validacion = validarTicketCompleto(nuevoTicket, tickets);
-      if (!validacion.valido) {
-        setError(validacion.errores.join(', '));
-        return null;
-      }
-
-      const actualizados = [...tickets, nuevoTicket];
-      setTickets(actualizados);
-      setError(null);
-
-      const ok = await persistir(actualizados);
-      if (!ok) {
-        // Revertir si falló la persistencia
-        setTickets(tickets);
-      }
-      return nuevoTicket;
-    },
-    [tickets, persistir, obtenerSeccionValida]
-  );
-
-
-
-  /**
-   * Edita un ticket existente y lo persiste.
-   */
-  const editarTicket = useCallback(
-    async (codigo, datosActualizados) => {
-      // Si se está cambiando el asignado, asegurar que sea válido
-      const asignadoAValido = datosActualizados['Asignado A']
-        ? obtenerSeccionValida(datosActualizados['Asignado A'])
-        : undefined;
-
-      const actualizados = tickets.map((ticket) =>
-        ticket.Codigo === codigo
-          ? {
-              ...ticket,
-              ...datosActualizados,
-              ...(asignadoAValido ? { 'Asignado A': asignadoAValido } : {}),
-            }
-          : ticket
+      // 2. Detectar tickets locales que pasaron a "terminado" en la API
+      const codigosTerminadosAPI = new Set(
+        ticketsAPI
+          .filter((t) => t.Estado === 'terminado')
+          .map((t) => t.Codigo)
       );
 
-      const validacion = validarTicketCompleto(
-        { ...actualizados.find((t) => t.Codigo === codigo), Codigo: codigo },
-        actualizados,
-        codigo
+      const ticketsParaCerrar = actualizados.filter((t) =>
+        codigosTerminadosAPI.has(t.Codigo)
       );
-      if (!validacion.valido) {
-        setError(validacion.errores.join(', '));
-        return false;
+
+      // Cerrar automáticamente los que pasaron a terminado
+      for (const ticketCerrar of ticketsParaCerrar) {
+        try {
+          await agregarTicketCerrado(obtenerHandleCerrados(), {
+            codigo: ticketCerrar.Codigo,
+            asunto: ticketCerrar.Asunto,
+            tipo: ticketCerrar.Tipo || 'Sin tipo',
+          });
+        } catch (err) {
+          console.error('Error al cerrar automáticamente:', err.message);
+        }
       }
 
-      setTickets(actualizados);
-      setError(null);
-      return await persistir(actualizados);
-    },
-    [tickets, persistir, obtenerSeccionValida]
-  );
+      // Quitar los cerrados de la lista activa
+      actualizados = actualizados.filter((t) => !codigosTerminadosAPI.has(t.Codigo));
 
+      // 3. Guardar si hubo cambios
+      if (cambios || ticketsParaCerrar.length > 0) {
+        setTickets(actualizados);
+        await persistir(actualizados);
+      }
 
+      setUltimoSincronizado(new Date().toISOString());
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSincronizando(false);
+    }
+  }, [tickets, persistir, obtenerHandleTickets, obtenerHandleCerrados, agregarTicketCerrado]);
 
   /**
-   * Elimina un ticket y persiste el cambio
+   * Inicia la sincronización automática cada minuto.
+   * Se ejecuta inmediatamente una vez al iniciar.
    */
-  const eliminarTicket = useCallback(
-    async (codigo) => {
-      if (!window.confirm('¿Estás seguro de eliminar este ticket?')) {
-        return false;
-      }
+  const iniciarSincronizacionAutomatica = useCallback(() => {
+    if (intervaloRef.current) return;
+    // Ejecutar inmediatamente una vez
+    sincronizarConAPI();
+    // Luego cada minuto
+    intervaloRef.current = setInterval(() => {
+      sincronizarConAPI();
+    }, 60000);
+  }, [sincronizarConAPI]);
 
-      const actualizados = tickets.filter((t) => t.Codigo !== codigo);
-      setTickets(actualizados);
-      setError(null);
-      return await persistir(actualizados);
-    },
-    [tickets, persistir]
-  );
+  /**
+   * Detiene la sincronización automática.
+   */
+  const detenerSincronizacionAutomatica = useCallback(() => {
+    if (intervaloRef.current) {
+      clearInterval(intervaloRef.current);
+      intervaloRef.current = null;
+    }
+  }, []);
 
-
+  /**
+   * Inicia o detiene la sincronización automática según si ambos archivos están listos.
+   */
+  useEffect(() => {
+    if (archivoListo && archivoCerradosListo) {
+      iniciarSincronizacionAutomatica();
+    } else {
+      detenerSincronizacionAutomatica();
+    }
+    return () => detenerSincronizacionAutomatica();
+  }, [archivoListo, archivoCerradosListo, iniciarSincronizacionAutomatica, detenerSincronizacionAutomatica]);
 
   /**
    * Abre un archivo de tickets cerrados existente.
@@ -233,14 +274,11 @@ export function useTickets() {
       setArchivoCerradosListo(true);
       setError(null);
       return handle;
-
     } catch (err) {
       setError(err.message);
       return null;
     }
   }, []);
-
-
 
   /**
    * Crea un nuevo archivo de tickets cerrados semanal.
@@ -251,116 +289,11 @@ export function useTickets() {
       setArchivoCerradosListo(true);
       setError(null);
       return handle;
-
     } catch (err) {
       setError(err.message);
       return null;
     }
   }, []);
-
-
-
-  /**
-   * Cierra un ticket: lo elimina de activos, lo escribe en el archivo de cerrados
-   * y actualiza el resumen semanal.
-   */
-  const cerrarTicket = useCallback(
-    async (codigo) => {
-      const ticket = tickets.find((t) => t.Codigo === codigo);
-      if (!ticket) return false;
-
-      // Si no hay archivo de cerrados seleccionado, no se puede cerrar
-      if (!obtenerHandleCerrados()) {
-        setError('Primero selecciona o crea un archivo de tickets cerrados.');
-        return false;
-      }
-
-      try {
-        // 1. Agregar al archivo de cerrados (con resumen automático)
-        await agregarTicketCerrado(obtenerHandleCerrados(), {
-          codigo: ticket.Codigo,
-          asunto: ticket.Asunto,
-          tipo: ticket.Tipo || 'Sin tipo',
-        });
-
-        // 2. Eliminar de tickets activos
-        const actualizados = tickets.filter((t) => t.Codigo !== codigo);
-        setTickets(actualizados);
-        setError(null);
-        await persistir(actualizados);
-        return true;
-
-      } catch (err) {
-        setError(err.message);
-        return false;
-      }
-    },
-    [tickets, persistir]
-  );
-
-
-
-  /**
-   * Crea un ticket y lo cierra inmediatamente (lo mueve al archivo de cerrados).
-   * Operación atómica: no hay problema de estado desactualizado.
-   *  
-   *============ ESTO SE VA A ELIMINAR EN EL FUTURO=====================0
-   * 
-   */
-  const crearYCerrarTicket = useCallback(
-    async (datosTicket) => {
-      // Verificar que el Asignado A sea válido
-      const asignadoAValido = obtenerSeccionValida(datosTicket['Asignado A']);
-
-      // Verificar que no exista ya un ticket con este Código (ni cerrado ni activo)
-      const ticketExistente = tickets.find((t) => t.Codigo === datosTicket.Codigo);
-
-      if (ticketExistente) {
-        // Ya existe -> duplicado
-        setError(
-          `Este ticket ya existe (Código: ${datosTicket.Codigo}). No se pueden crear tickets duplicados.`
-        );
-        return false;
-      }
-
-      // Crear el nuevo ticket
-      const nuevo = crearTicket({
-        ...datosTicket,
-        'Asignado A': asignadoAValido,
-      });
-
-      const validacion = validarTicketCompleto(nuevo, tickets);
-      if (!validacion.valido) {
-        setError(validacion.errores.join(', '));
-        return false;
-      }
-
-      // Si no hay archivo de cerrados seleccionado, no se puede cerrar
-      if (!obtenerHandleCerrados()) {
-        setError('Primero selecciona o crea un archivo de tickets cerrados.');
-        return false;
-      }
-
-      try {
-        // Agregar al archivo de cerrados (con resumen automático)
-        await agregarTicketCerrado(obtenerHandleCerrados(), {
-          codigo: nuevo.Codigo,
-          asunto: nuevo.Asunto,
-          tipo: nuevo.Tipo || 'Sin tipo',
-        });
-
-        // El ticket nunca se agregó a tickets activos, solo se fue directamente a cerrados
-        setError(null);
-        return true;
-      } catch (err) {
-        setError(err.message);
-        return false;
-      }
-    },
-    [tickets, obtenerSeccionValida]
-  );
-
-
 
   /**
    * Cambia el estado de "resaltado" de un ticket.
@@ -373,8 +306,6 @@ export function useTickets() {
     setError(null);
     return await persistir(actualizados);
   }, [tickets, persistir]);
-
-
 
   /**
    * Cambia la prioridad de un ticket en ciclo: baja -> media -> alta -> baja.
@@ -396,8 +327,6 @@ export function useTickets() {
     return await persistir(actualizados);
   }, [tickets, persistir]);
 
-
-
   /**
    * Edita la descripción de un ticket inline.
    */
@@ -411,8 +340,6 @@ export function useTickets() {
     setError(null);
     return await persistir(actualizados);
   }, [tickets, persistir]);
-
-
 
   /**
    * Agrega un comentario a un ticket.
@@ -436,7 +363,25 @@ export function useTickets() {
     return await persistir(actualizados);
   }, [tickets, persistir]);
 
+  /**
+   * Mueve un ticket a otra sección (Asignado A).
+   */
+  const moverTicket = useCallback(async (codigo, nuevaSeccionId) => {
+    const asignadoAValido = obtenerSeccionValida(nuevaSeccionId);
+    const actualizados = tickets.map((t) =>
+      t.Codigo === codigo ? { ...t, 'Asignado A': asignadoAValido } : t
+    );
+    setTickets(actualizados);
+    setError(null);
+    return await persistir(actualizados);
+  }, [tickets, persistir, obtenerSeccionValida]);
 
+  /**
+   * Reordena secciones.
+   */
+  const reordenarSecciones = useCallback(async (nuevasSecciones) => {
+    setSecciones(nuevasSecciones);
+  }, []);
 
   return {
     // Estado
@@ -445,9 +390,12 @@ export function useTickets() {
     busqueda,
     setBusqueda,
     archivoListo,
-    error,
     archivoCerradosListo,
-    
+    error,
+    sincronizando,
+    ultimoSincronizado,
+    puedeSincronizar: Boolean(archivoListo && archivoCerradosListo),
+
     seccionExpandida,
     setSeccionExpandida,
     PRIORIDADES,
@@ -455,17 +403,16 @@ export function useTickets() {
     // Acciones
     inicializarArchivo,
     obtenerTicketsPorSeccion,
-    agregarTicket,
-    cerrarTicket,
+    sincronizarConAPI,
+    iniciarSincronizacionAutomatica,
+    detenerSincronizacionAutomatica,
     toggleAtencion,
     cambiarPrioridad,
     agregarComentario,
     editarDescripcion,
     abrirArchivoCerrados,
     crearNuevoArchivoCerrados,
-    crearYCerrarTicket,
-
-    editarTicket,
-    eliminarTicket
+    moverTicket,
+    reordenarSecciones,
   };
 }
