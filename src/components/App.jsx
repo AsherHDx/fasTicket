@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { Plus, Clipboard } from 'lucide-react';
 import { useTickets } from '../hooks/useTickets.js';
 import { obtenerEtiquetaSemanaActual } from '../utils/fechas.js';
+import { copiarPortapapeles } from '../utils/varios.js';
 import Buscador from './Buscador.jsx';
 import Seccion from './Seccion.jsx';
 
@@ -32,21 +33,6 @@ export default function App() {
     crearYCerrarTicket,
   } = useTickets();
 
-  const [modalAbierto, setModalAbierto] = useState(false);
-  const [notificacion, setNotificacion] = useState(null);
-
-  // Modal de mensajes (comentarios)
-  const [modalMensajesAbierto, setModalMensajesAbierto] = useState(false);
-  const [ticketMensajesAbierto, setTicketMensajesAbierto] = useState(null);
-  const [nuevoComentario, setNuevoComentario] = useState('');
-
-  // Qué secciones están expandidas (todas por defecto)
-  const [seccionesExpandidas, setSeccionesExpandidas] = useState(
-    new Set(secciones.map((s) => s.id))
-  );
-
-  // Qué sección está visible (null = mostrar todas, string = id de una sección)
-  const [seccionVisible, setSeccionVisible] = useState(null);
 
   // Tipos de ticket disponibles
   const TIPOS_TICKET = [
@@ -59,40 +45,57 @@ export default function App() {
     'infraestructura',
   ];
 
+  const [modalAbierto, setModalAbierto] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  // Qué secciones están expandidas (todas por defecto)
+  const [seccionesExpandidas, setSeccionesExpandidas] = useState(
+    new Set(secciones.map((s) => s.id))
+  );
+
+  // Qué sección está visible (null = mostrar todas, string = id de una sección)
+  const [seccionVisible, setSeccionVisible] = useState(null);
+
+  // Modal de mensajes (comentarios)
+  const [modalMensajesAbierto, setModalMensajesAbierto] = useState(false);
+  const [ticketMensajesAbierto, setTicketMensajesAbierto] = useState(null);
+  const [nuevoComentario, setNuevoComentario] = useState('');
+
   // Formulario de crear ticket (modal)
   const [textoLineas, setTextoLineas] = useState('');
   const [formSeccionId, setFormSeccionId] = useState(secciones.length > 0 ? secciones[0].id : '');
   const [formTipo, setFormTipo] = useState(TIPOS_TICKET[0]);
 
-  // Copiar al portapapeles
-  const copiarPortapapeles = async (texto) => {
-    try {
-      await navigator.clipboard.writeText(texto);
-      setNotificacion({ tipo: 'exito', mensaje: 'Copiado al portapapeles' });
-      setTimeout(() => setNotificacion(null), 2000);
-    } catch (err) {
-      setNotificacion({ tipo: 'error', mensaje: `No se pudo copiar: ${err}` });
-      setTimeout(() => setNotificacion(null), 2000);
-    }
-  };
+  
 
-  // Manejar acciones de las tarjetas de ticket
+  /**
+   * Función que maneja los botones de la tarjeta del ticket
+   * @param {string} tipo tipo de botón (copiar-datos, cerrar, ...) que vienen definidos en TicketCard.jsx
+   * @param {string} codigo id del ticket (ej, #VD-OPS-000567)
+   */
   const manejarAccionTicket = async (tipo, codigo) => {
     switch (tipo) {
+      /*
+      Copia los datos del ticket en el porta papeles con el formato:
+      URL
+      ASUNTO
+      CODIGO
+      */
       case 'copiar-datos': {
-        const t = tickets.find((x) => x.Codigo === codigo);
-        if (t) {
-          const datos = `${t.Codigo}\n${t.Asunto}\n${t.Tipo}`;
-          await copiarPortapapeles(datos);
+        const ticket = tickets.find((t) => t.Codigo === codigo);
+        if (ticket) {
+          const datos = `URL\n${ticket.Asunto}\n${ticket.Codigo}`;
+          await copiarPortapapeles(datos, setToast);
         }
         break;
       }
-      case 'cerrar':
-        await cerrarTicket(codigo);
-        break;
+
+      //Resalta el ticket en naranja
       case 'atencion':
         await toggleAtencion(codigo);
         break;
+
+      //Abre modal de mensajes del ticket
       case 'mensajes': {
         const t = tickets.find((x) => x.Codigo === codigo);
         if (t) {
@@ -101,6 +104,7 @@ export default function App() {
         }
         break;
       }
+
       default:
         break;
     }
@@ -114,8 +118,8 @@ export default function App() {
     const lineas = textoLineas.split('\n').map((l) => l.trim()).filter((l) => l !== '');
 
     if (lineas.length < 4) {
-      setNotificacion({ tipo: 'error', mensaje: 'Debes ingresar Código, Asunto, Tipo y Asignado A (una por línea)' });
-      setTimeout(() => setNotificacion(null), 3000);
+      setToast({ tipo: 'error', mensaje: 'Debes ingresar Código, Asunto, Tipo y Asignado A (una por línea)' });
+      setTimeout(() => setToast(null), 3000);
       return;
     }
 
@@ -126,8 +130,8 @@ export default function App() {
     const descripcion = lineas.length > 4 ? lineas[4] : '';
 
     if (!codigo || !asunto || !tipo || !asignadoA) {
-      setNotificacion({ tipo: 'error', mensaje: 'Código, Asunto, Tipo y Asignado A son obligatorios' });
-      setTimeout(() => setNotificacion(null), 3000);
+      setToast({ tipo: 'error', mensaje: 'Código, Asunto, Tipo y Asignado A son obligatorios' });
+      setTimeout(() => setToast(null), 3000);
       return;
     }
 
@@ -150,14 +154,14 @@ export default function App() {
     if (!resultado) {
       // Ticket duplicado (error ya establecido en el hook)
       if (error) {
-        setNotificacion({ tipo: 'error', mensaje: error });
-        setTimeout(() => setNotificacion(null), 3000);
+        setToast({ tipo: 'error', mensaje: error });
+        setTimeout(() => setToast(null), 3000);
       }
       return;
     }
 
-    setNotificacion({ tipo: 'exito', mensaje: 'Ticket creado exitosamente' });
-    setTimeout(() => setNotificacion(null), 3000);
+    setToast({ tipo: 'exito', mensaje: 'Ticket creado exitosamente' });
+    setTimeout(() => setToast(null), 3000);
 
     setTextoLineas('');
     setFormSeccionId(secciones.length > 0 ? secciones[0].id : '');
@@ -173,8 +177,8 @@ export default function App() {
     const lineas = textoLineas.split('\n').map((l) => l.trim()).filter((l) => l !== '');
 
     if (lineas.length < 4) {
-      setNotificacion({ tipo: 'error', mensaje: 'Debes ingresar Código, Asunto, Tipo y Asignado A (una por línea)' });
-      setTimeout(() => setNotificacion(null), 3000);
+      setToast({ tipo: 'error', mensaje: 'Debes ingresar Código, Asunto, Tipo y Asignado A (una por línea)' });
+      setTimeout(() => setToast(null), 3000);
       return;
     }
 
@@ -185,8 +189,8 @@ export default function App() {
     const descripcion = lineas.length > 4 ? lineas[4] : '';
 
     if (!codigo || !asunto || !tipo || !asignadoA) {
-      setNotificacion({ tipo: 'error', mensaje: 'Código, Asunto, Tipo y Asignado A son obligatorios' });
-      setTimeout(() => setNotificacion(null), 3000);
+      setToast({ tipo: 'error', mensaje: 'Código, Asunto, Tipo y Asignado A son obligatorios' });
+      setTimeout(() => setToast(null), 3000);
       return;
     }
 
@@ -208,14 +212,14 @@ export default function App() {
 
     if (!ok) {
       if (error) {
-        setNotificacion({ tipo: 'error', mensaje: error });
-        setTimeout(() => setNotificacion(null), 3000);
+        setToast({ tipo: 'error', mensaje: error });
+        setTimeout(() => setToast(null), 3000);
       }
       return;
     }
 
-    setNotificacion({ tipo: 'exito', mensaje: 'Ticket creado y cerrado exitosamente' });
-    setTimeout(() => setNotificacion(null), 3000);
+    setToast({ tipo: 'exito', mensaje: 'Ticket creado y cerrado exitosamente' });
+    setTimeout(() => setToast(null), 3000);
 
     setTextoLineas('');
     setFormSeccionId(secciones.length > 0 ? secciones[0].id : '');
@@ -239,8 +243,8 @@ export default function App() {
         Comentarios: [...(prev.Comentarios || []), comentarioConFecha]
       }));
       setNuevoComentario('');
-      setNotificacion({ tipo: 'exito', mensaje: 'Comentario agregado' });
-      setTimeout(() => setNotificacion(null), 2000);
+      setToast({ tipo: 'exito', mensaje: 'Comentario agregado' });
+      setTimeout(() => setToast(null), 2000);
     }
   };
 
@@ -265,9 +269,9 @@ export default function App() {
   return (
     <div className="app-container">
       {/* Notificación */}
-      {notificacion && (
-        <div className={`notificacion ${notificacion.tipo}`}>
-          {notificacion.mensaje}
+      {toast && (
+        <div className={`notificacion ${toast.tipo}`}>
+          {toast.mensaje}
         </div>
       )}
 
